@@ -4,11 +4,11 @@ This repository contains the Single Page Application (SPA) frontend for `jyates.
 
 ## Architecture
 
-* **Framework**: React 18 
+* **Framework**: React 18 / React Router 7
 * **Tooling**: Vite (for lightning-fast HMR and optimized builds)
-* **Styling**: Vanilla CSS with modern flex/grid layouts and CSS tokens
+* **Styling**: Tailwind CSS v4 with modern flex/grid layouts and CSS tokens
 * **Data Fetching**: SWR (Stale-While-Revalidate) for optimistic UI and caching
-* **Routing**: React Router
+* **Content**: MDX for blog posts and documentation
 * **Observability**: AWS CloudWatch RUM (Real User Monitoring) configured for 10% sampling
 
 ## Local Development
@@ -29,19 +29,53 @@ npm run dev
 
 ## Testing
 
-For React-specific component testing:
+### Unit / Component Tests (Vitest)
+Fast isolated tests for all React components using `@testing-library/react`.
+
 ```bash
 cd spa
 npm test
 ```
 
-For browser visual regression tests and full backend-dependent workflow tests, look in the `jyatesdotdev-integration` E2E test suite.
+### Frontend-Only E2E Tests (Playwright)
+Navigation and visual regression tests that don't require a backend:
 
-## Deployment pipeline
+```bash
+cd spa
+npx playwright test e2e/home.spec.ts
+npx playwright test e2e/visual.spec.ts
+```
+
+### Full Integration E2E Tests
+Tests that require a real backend live in the sibling [`jyatesdotdev-integration`](https://github.com/jyatesdotdev/jyatesdotdev-integration) repo.
+
+## Observability
+
+The `Analytics` component provides a decoupled telemetry pipeline:
+
+- **Production**: Initializes the `aws-rum-web` SDK when `VITE_RUM_IDENTITY_POOL_ID` is set.
+- **Development**: Falls back to a mock dispatcher that logs events to the dev server console at `/rum-telemetry`.
+
+### Tracked Events
+- **Page views** — Every SPA route change
+- **Performance** — TTFB, DOMContentLoaded, Load Event
+- **Errors** — Global JS exceptions, API failures, rendering crashes
+- **Custom interactions** — Blog post likes (`like_toggled`)
+
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `VITE_RUM_APPLICATION_ID` | Yes (dev) | RUM application ID (use `00000000-...` locally) |
+| `VITE_RUM_IDENTITY_POOL_ID` | Prod only | Cognito pool — triggers real SDK |
+| `VITE_RECAPTCHA_SITE_KEY` | Prod only | Google ReCAPTCHA v3 site key |
+| `VITE_PROXY_TARGET` | Dev only | API Gateway URL for local backend proxying |
+
+## Deployment Pipeline
 
 Deployments are handled by GitHub Actions. 
-1. Pushes to `main` are swept by `CodeQL` and `npm audit` for supply-chain vulnerabilities, as well as checking `Vitest` regressions.
-2. The code is compiled by Vite and synced up to a static S3 Hosting Bucket via the `Deploy` workflow.
+1. Pushes to `main` are swept by `CodeQL` (Security Scans) and `npm audit` for vulnerabilities, as well as checking `Vitest` regressions.
+2. The code is compiled by Vite and synced up to a static S3 Hosting Bucket via the `Frontend Deployment` workflow.
 3. The workflow fires a Webhook cross-repository to `jyatesdotdev-infra`, instructing Terraform to invalidate the CloudFront CDN caches.
 
 ### Required Secrets
