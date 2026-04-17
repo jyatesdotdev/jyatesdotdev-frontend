@@ -45,7 +45,7 @@ export function Post() {
               '@type': 'Person',
               name: 'Jonathan Yates',
             },
-          }),
+          }).replace(/</g, '\\u003c'),
         }}
       />
       <h1 className="title font-semibold text-2xl tracking-tighter">
