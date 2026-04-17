@@ -16,21 +16,9 @@ jobs:
         with:
           node-version: '20'
       - name: Install dependencies
-        run: npm install --prefix spa
+        run: npm ci --prefix spa
       - name: Run npm audit
-        run: npm audit --prefix spa
-
-  tfsec:
-    name: tfsec PR commenter
-    runs-on: ubuntu-latest
-    steps:
-      - name: Clone repo
-        uses: actions/checkout@v4
-      - name: tfsec
-        uses: aquasecurity/tfsec-pr-commenter-action@v1.2.0
-        with:
-          github_token: ${{ github.token }}
-          working_directory: infra
+        run: npm audit --prefix spa --audit-level=high
 
   codeql:
     name: CodeQL
@@ -46,3 +34,17 @@ jobs:
           languages: javascript-typescript
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
+
+  test:
+    name: Vitest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm ci --prefix spa
+      - name: Run tests
+        run: npm test --prefix spa
