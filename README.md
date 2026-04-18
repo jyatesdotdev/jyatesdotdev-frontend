@@ -1,86 +1,71 @@
 # jyatesdotdev-frontend
 
-This repository contains the Single Page Application (SPA) frontend for `jyates.dev`. It is a React-based web application focused on speed, brutalist premium aesthetics, and responsive layout.
+React SPA for [jyates.dev](https://jyates.dev) — prerendered static site served from S3 via CloudFront.
 
 ## Architecture
 
-* **Framework**: React 18 / React Router 7
-* **Tooling**: Vite (for lightning-fast HMR and optimized builds)
-* **Styling**: Tailwind CSS v4 with modern flex/grid layouts and CSS tokens
-* **Data Fetching**: SWR (Stale-While-Revalidate) for optimistic UI and caching
-* **Content**: MDX for blog posts and documentation
-* **Observability**: AWS CloudWatch RUM (Real User Monitoring) configured for 10% sampling
+- **Framework**: React 18 / React Router 7 (SPA mode, `ssr: false`)
+- **Build**: Vite with prerendering — generates static HTML for all routes at build time
+- **Styling**: Tailwind CSS v4
+- **Data Fetching**: SWR for API interactions (likes, comments)
+- **Content**: Blog posts are MDX files bundled at build time. Projects, career, and library are static data files.
+- **Observability**: CloudWatch RUM (10% sampling in production)
+
+### Key Design Decisions
+
+- **SPA mode** (`ssr: false`): React Router's server-side rendering requires a `/__manifest` endpoint that doesn't exist on static S3 hosting. SPA mode with prerendering gives the best of both worlds — fast initial loads from prerendered HTML, client-side navigation after hydration.
+- **CloudFront Function**: Rewrites directory-like paths (e.g., `/projects`) to `/projects/index.html` so prerendered routes resolve in S3. Excludes `/api/*` paths.
+- **Custom Error Response**: CloudFront returns `index.html` for 404s (SPA fallback). Only 404 is caught — not 403 — so API error responses pass through correctly.
 
 ## Local Development
 
-While you can run the frontend in isolation, it expects an API to communicate with. For full-stack development, we use the integration shell scripts.
-
-1. Navigate to the Integration repository: `cd ../jyatesdotdev-integration`
-2. Boot the stack: `./start-dev.sh`
-
-This orchestrates a LocalStack simulated-AWS backend locally, formats `.env.local`, and then spins up the Vite compilation server automatically.
-
-To run purely the frontend in isolation (with no backend available):
 ```bash
 cd spa
-npm i
+npm install
 npm run dev
 ```
 
+The frontend expects the API at `/api/v1/*`. For local development with a backend, configure `VITE_PROXY_TARGET`.
+
 ## Testing
 
-### Unit / Component Tests (Vitest)
-Fast isolated tests for all React components using `@testing-library/react`.
-
 ```bash
 cd spa
-npm test
+npm test              # Vitest unit/component tests
+npx playwright test   # E2E tests
 ```
 
-### Frontend-Only E2E Tests (Playwright)
-Navigation and visual regression tests that don't require a backend:
+## Deployment
+
+Pushes to `main` (under `spa/**`) or manual `workflow_dispatch` trigger the pipeline:
+
+1. Build the SPA with Vite (prerendering all routes)
+2. Sync `build/client/` to the S3 static site bucket
+3. Invalidate the CloudFront cache (`/*`)
+
+The frontend deploy does **not** trigger the infra repo — it only needs S3 sync and cache invalidation.
+
+### Manual Trigger
 
 ```bash
-cd spa
-npx playwright test e2e/home.spec.ts
-npx playwright test e2e/visual.spec.ts
+gh workflow run deploy.yml --repo jyatesdotdev/jyatesdotdev-frontend --ref main
 ```
 
-### Full Integration E2E Tests
-Tests that require a real backend live in the sibling [`jyatesdotdev-integration`](https://github.com/jyatesdotdev/jyatesdotdev-integration) repo.
+### Required Secrets & Variables
 
-## Observability
-
-The `Analytics` component provides a decoupled telemetry pipeline:
-
-- **Production**: Initializes the `aws-rum-web` SDK when `VITE_RUM_IDENTITY_POOL_ID` is set.
-- **Development**: Falls back to a mock dispatcher that logs events to the dev server console at `/rum-telemetry`.
-
-### Tracked Events
-- **Page views** — Every SPA route change
-- **Performance** — TTFB, DOMContentLoaded, Load Event
-- **Errors** — Global JS exceptions, API failures, rendering crashes
-- **Custom interactions** — Blog post likes (`like_toggled`)
+| Type | Name | Description |
+|---|---|---|
+| Secret | `AWS_ROLE_ARN` | GitHub OIDC deploy role ARN |
+| Secret | `FRONTEND_BUCKET` | S3 bucket name for static site |
+| Variable | `CLOUDFRONT_DISTRIBUTION_ID` | `E2KZGHUJ0ENT2P` |
+| Variable | `VITE_RECAPTCHA_SITE_KEY` | Google reCAPTCHA v3 site key |
+| Variable | `AWS_REGION` | `us-west-2` |
 
 ## Environment Variables
 
-| Variable | Required | Description |
+| Variable | Context | Description |
 |---|---|---|
-| `VITE_RUM_APPLICATION_ID` | Yes (dev) | RUM application ID (use `00000000-...` locally) |
-| `VITE_RUM_IDENTITY_POOL_ID` | Prod only | Cognito pool — triggers real SDK |
-| `VITE_RECAPTCHA_SITE_KEY` | Prod only | Google ReCAPTCHA v3 site key |
-| `VITE_PROXY_TARGET` | Dev only | API Gateway URL for local backend proxying |
-
-## Deployment Pipeline
-
-Deployments are handled by GitHub Actions. 
-1. Pushes to `main` are swept by `CodeQL` (Security Scans) and `npm audit` for vulnerabilities, as well as checking `Vitest` regressions.
-2. The code is compiled by Vite and synced up to a static S3 Hosting Bucket via the `Frontend Deployment` workflow.
-3. The workflow fires a Webhook cross-repository to `jyatesdotdev-infra`, instructing Terraform to invalidate the CloudFront CDN caches.
-
-### Required Secrets
-To enable the deployment pipeline, provide the following GitHub Action secrets:
-* `AWS_ACCESS_KEY_ID`
-* `AWS_SECRET_ACCESS_KEY`
-* `FRONTEND_BUCKET` (The name of the target static S3 bucket)
-* `INFRA_REPO_PAT` (A GitHub Personal Access Token to trigger `jyatesdotdev-infra`)
+| `VITE_RUM_APPLICATION_ID` | Dev | RUM application ID |
+| `VITE_RUM_IDENTITY_POOL_ID` | Prod | Cognito pool — enables real RUM SDK |
+| `VITE_RECAPTCHA_SITE_KEY` | Prod | reCAPTCHA v3 site key |
+| `VITE_PROXY_TARGET` | Dev | API Gateway URL for local proxying |
