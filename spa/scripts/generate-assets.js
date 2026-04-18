@@ -81,6 +81,8 @@ function generateRSS(posts) {
 </rss>`;
 
   fs.writeFileSync(path.join(BUILD_DIR, 'rss.xml'), rss);
+  fs.mkdirSync(path.join(BUILD_DIR, 'rss'), { recursive: true });
+  fs.writeFileSync(path.join(BUILD_DIR, 'rss', 'index.html'), rss);
   console.log('✅ Generated rss.xml');
 }
 
