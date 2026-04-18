@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { highlight } from 'sugar-high';
+import { PlantUML } from './plantuml';
 
 function Code({ children, ...props }: any) {
   if (typeof children === 'string') {
@@ -75,4 +76,5 @@ export const MDXComponents = {
   img: RoundedImage,
   a: CustomLink,
   code: Code,
+  PlantUML,
 };
