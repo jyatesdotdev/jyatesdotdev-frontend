@@ -16,7 +16,7 @@ export const careerItems: CareerItem[] = [
     endDate: 'Present',
     location: 'Seattle, WA | On-site',
     description: [],
-    logo: '/logos/amazon.svg',
+    logo: '/logos/amazon.png',
   },
   {
     title: 'Senior Software Developer',
