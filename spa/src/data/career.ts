@@ -15,7 +15,15 @@ export const careerItems: CareerItem[] = [
     startDate: 'Aug 2025',
     endDate: 'Present',
     location: 'Seattle, WA | On-site',
-    description: [],
+    description: [
+      'Advertisement targeting for Amazon.com — core service serves 500K+ RPS at sub-40ms latency for hundreds of internal teams.',
+      'Cut logging costs by filtering noisy events while preserving all DMA-related requests required for EU regulatory compliance.',
+      'Replaced a legacy data pipeline trigger with a low-cost, low-maintenance service — reduced operational burden and infrastructure spend.',
+      'Built agentic workflows that automated on-call triage, Athena log querying, data engineering investigation, and code review.',
+      'Ran application security review for the core service: threat modeling, mitigation implementation, and direct coordination with security engineers.',
+      'Drove cross-team integrations that unblocked other teams from shipping new features on our platform.',
+      'Deployed infrastructure and services to new AWS regions, enabling deprecation of legacy regions AWS is sunsetting.',
+    ],
     logo: '/logos/amazon.png',
   },
   {
