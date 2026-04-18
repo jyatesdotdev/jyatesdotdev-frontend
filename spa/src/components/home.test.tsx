@@ -14,13 +14,13 @@ describe('Home', () => {
     );
     
     expect(screen.getByText(/Jonathan Yates/i)).toBeInTheDocument();
-    expect(screen.getByText(/Senior Software Developer/i)).toBeInTheDocument();
+    expect(screen.getByText(/Software Development Engineer/i)).toBeInTheDocument();
 
     await waitFor(() => {
       expect(document.title).toBe('Jonathan Yates | Jonathan Yates');
     });
 
     const metaDescription = document.querySelector('meta[name="description"]');
-    expect(metaDescription?.getAttribute('content')).toContain('Senior Software Developer at INVIDI Technologies');
+    expect(metaDescription?.getAttribute('content')).toContain('Software Development Engineer at Amazon');
   });
 });

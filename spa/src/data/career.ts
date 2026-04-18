@@ -10,10 +10,19 @@ export interface CareerItem {
 
 export const careerItems: CareerItem[] = [
   {
+    title: 'Software Development Engineer II',
+    company: 'Amazon',
+    startDate: 'Aug 2025',
+    endDate: 'Present',
+    location: 'Seattle, WA | On-site',
+    description: [],
+    logo: '/logos/amazon.svg',
+  },
+  {
     title: 'Senior Software Developer',
     company: 'INVIDI Technologies',
     startDate: 'June 2022',
-    endDate: 'Present',
+    endDate: 'Aug 2025',
     location: 'Princeton, NJ | Hybrid',
     description: [
       'Managing multi-region Kubernetes clusters in AWS and GCP.',

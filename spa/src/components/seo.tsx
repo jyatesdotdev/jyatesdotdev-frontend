@@ -17,7 +17,7 @@ export function SEO({
 }: SEOProps) {
   const siteName = 'Jonathan Yates';
   const fullTitle = title ? `${title} | ${siteName}` : siteName;
-  const defaultDescription = 'Senior Software Developer at INVIDI Technologies. Passionate about software development, cloud technologies, and continuous learning.';
+  const defaultDescription = 'Software Development Engineer at Amazon. Passionate about software development, cloud technologies, and continuous learning.';
   const metaDescription = description || defaultDescription;
   const siteUrl = 'https://jyates.dev';
   const fullUrl = url ? (url.startsWith('http') ? url : `${siteUrl}${url}`) : siteUrl;

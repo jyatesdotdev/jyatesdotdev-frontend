@@ -18,7 +18,7 @@ export function Home() {
     <section className="w-full">
       <SEO 
         title="Jonathan Yates" 
-        description="Senior Software Developer at INVIDI Technologies. Passionate about software development, cloud technologies, and continuous learning." 
+        description="Software Development Engineer at Amazon. Passionate about software development, cloud technologies, and continuous learning." 
       />
       {/* Profile Section */}
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6 lg:gap-10 mb-12">
@@ -32,7 +32,7 @@ export function Home() {
         <div className="flex-grow max-w-none mt-4 md:mt-0">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Jonathan Yates</h1>
           <h2 className="text-neutral-500 dark:text-neutral-400 mb-4">
-            Senior Software Developer at INVIDI Technologies
+            Software Development Engineer at Amazon
           </h2>
           <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
             Passionate about software development, cloud technologies, and continuous learning.
