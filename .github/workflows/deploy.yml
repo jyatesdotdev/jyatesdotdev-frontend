@@ -36,6 +36,8 @@ jobs:
         run: npm run build
         env:
           VITE_RECAPTCHA_SITE_KEY: ${{ vars.VITE_RECAPTCHA_SITE_KEY }}
+          VITE_RUM_APPLICATION_ID: ${{ vars.VITE_RUM_APPLICATION_ID }}
+          VITE_RUM_IDENTITY_POOL_ID: ${{ vars.VITE_RUM_IDENTITY_POOL_ID }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
