@@ -9,7 +9,7 @@ React SPA for [jyates.dev](https://jyates.dev) — prerendered static site serve
 - **Styling**: Tailwind CSS v4
 - **Data Fetching**: SWR for API interactions (likes, comments)
 - **Content**: Blog posts are MDX files bundled at build time. Projects, career, and library are static data files.
-- **Observability**: CloudWatch RUM (10% sampling in production)
+- **Observability**: CloudWatch RUM (100% sampling in production, protected by $10/month budget guard)
 
 ### Key Design Decisions
 
