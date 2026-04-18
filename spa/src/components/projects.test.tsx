@@ -10,7 +10,7 @@ describe('Projects', () => {
       </BrowserRouter>
     );
     
-    expect(screen.getByText(/Projects/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Projects/i })).toBeInTheDocument();
     expect(screen.getByText(/Personal Portfolio/i)).toBeInTheDocument();
   });
 });
