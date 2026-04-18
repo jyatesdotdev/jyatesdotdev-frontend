@@ -33,6 +33,8 @@ jobs:
       - name: Build
         working-directory: spa
         run: npm run build
+        env:
+          VITE_RECAPTCHA_SITE_KEY: ${{ vars.VITE_RECAPTCHA_SITE_KEY }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
