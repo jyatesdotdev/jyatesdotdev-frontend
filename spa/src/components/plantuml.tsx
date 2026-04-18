@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import plantumlEncoder from 'plantuml-encoder';
+import * as plantumlEncoder from 'plantuml-encoder';
 
 const SERVER = 'https://www.plantuml.com/plantuml/svg/';
 
@@ -12,7 +12,8 @@ export function PlantUML({ children }: { children: string }) {
 
   useEffect(() => {
     if (!source) return;
-    const encoded = plantumlEncoder.encode(source);
+    const encoder = (plantumlEncoder as any).default || plantumlEncoder;
+    const encoded = encoder.encode(source);
     fetch(`${SERVER}${encoded}`)
       .then((r) => {
         if (!r.ok) throw new Error(r.statusText);
@@ -44,14 +45,14 @@ export function PlantUML({ children }: { children: string }) {
   return (
     <div className="my-6">
       <div
-        className={`overflow-auto rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 ${
+        className={`overflow-auto rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 ${
           zoomed ? 'max-h-none' : 'max-h-[500px]'
         }`}
       >
         <img
           src={svg}
           alt="PlantUML diagram"
-          className={`mx-auto transition-transform duration-200 ${
+          className={`mx-auto transition-transform duration-200 dark:invert dark:hue-rotate-180 ${
             zoomed ? 'scale-150 cursor-zoom-out' : 'cursor-zoom-in'
           }`}
           onClick={() => setZoomed(!zoomed)}

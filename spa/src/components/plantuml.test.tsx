@@ -4,6 +4,7 @@ import { PlantUML } from './plantuml';
 
 vi.mock('plantuml-encoder', () => ({
   default: { encode: () => 'SoWkIImgAStDuNBAJrBGjLDmpCbCJbMmKiX8pSd9vt98pKi1IW80' },
+  encode: () => 'SoWkIImgAStDuNBAJrBGjLDmpCbCJbMmKiX8pSd9vt98pKi1IW80',
 }));
 
 describe('PlantUML', () => {
