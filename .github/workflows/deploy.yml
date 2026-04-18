@@ -48,13 +48,5 @@ jobs:
         run: |
           aws s3 sync build/client/ s3://${{ secrets.FRONTEND_BUCKET }}/ --delete
 
-      - name: Trigger Infra Deployment
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.INFRA_REPO_PAT }}
-          repository: ${{ github.repository_owner }}/jyatesdotdev-infra
-          event-type: deploy_frontend
-          client-payload: |
-            {
-              "trigger": "frontend_update"
-            }
+      - name: Invalidate CloudFront Cache
+        run: aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
