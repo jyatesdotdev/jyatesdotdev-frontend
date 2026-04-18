@@ -57,15 +57,17 @@ gh workflow run deploy.yml --repo jyatesdotdev/jyatesdotdev-frontend --ref main
 |---|---|---|
 | Secret | `AWS_ROLE_ARN` | GitHub OIDC deploy role ARN |
 | Secret | `FRONTEND_BUCKET` | S3 bucket name for static site |
-| Variable | `CLOUDFRONT_DISTRIBUTION_ID` | `E2KZGHUJ0ENT2P` |
+| Variable | `CLOUDFRONT_DISTRIBUTION_ID` | CloudFront distribution ID |
 | Variable | `VITE_RECAPTCHA_SITE_KEY` | Google reCAPTCHA v3 site key |
+| Variable | `VITE_RUM_APPLICATION_ID` | CloudWatch RUM app monitor ID |
+| Variable | `VITE_RUM_IDENTITY_POOL_ID` | Cognito Identity Pool ID for RUM |
 | Variable | `AWS_REGION` | `us-west-2` |
 
 ## Environment Variables
 
 | Variable | Context | Description |
 |---|---|---|
-| `VITE_RUM_APPLICATION_ID` | Dev | RUM application ID |
-| `VITE_RUM_IDENTITY_POOL_ID` | Prod | Cognito pool — enables real RUM SDK |
+| `VITE_RUM_APPLICATION_ID` | Prod | RUM application ID |
+| `VITE_RUM_IDENTITY_POOL_ID` | Prod | Cognito Identity Pool — enables real RUM SDK |
 | `VITE_RECAPTCHA_SITE_KEY` | Prod | reCAPTCHA v3 site key |
 | `VITE_PROXY_TARGET` | Dev | API Gateway URL for local proxying |
