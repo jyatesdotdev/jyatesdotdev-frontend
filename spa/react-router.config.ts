@@ -4,7 +4,7 @@ import path from "path";
 
 export default {
   appDirectory: "src",
-  ssr: true,
+  ssr: false,
   async prerender() {
     const postsDir = path.join(process.cwd(), "src/blog/posts");
     let blogRoutes: string[] = [];
