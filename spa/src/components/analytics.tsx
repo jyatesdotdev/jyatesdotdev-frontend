@@ -15,7 +15,7 @@ export function Analytics() {
     import('aws-rum-web').then((pkg) => {
       const { AwsRum } = pkg.default || pkg;
       const rum = new AwsRum(appId, '1.0.0', 'us-west-2', {
-        sessionSampleRate: 0.1,
+        sessionSampleRate: 1,
         identityPoolId,
         endpoint: 'https://dataplane.rum.us-west-2.amazonaws.com',
         telemetries: ['performance', 'errors', 'http'],
