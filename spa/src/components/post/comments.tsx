@@ -116,11 +116,8 @@ function CommentItem({
   onLikeToggled: () => void;
 }) {
   const [comment, setComment] = useState(initialComment);
-  const { executeRecaptcha } = useGoogleReCaptcha();
 
   const toggleLike = async () => {
-    const token = executeRecaptcha ? await executeRecaptcha('comment_like') : 'dummy-token';
-    
     // Optimistic Update
     const prevComment = comment;
     setComment({
@@ -130,7 +127,7 @@ function CommentItem({
     });
 
     try {
-      await api.comments.toggleLike(comment.id, slug, token);
+      await api.comments.toggleLike(comment.id, slug);
       onLikeToggled();
     } catch (err) {
       // Revert on error

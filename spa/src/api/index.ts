@@ -1,3 +1,5 @@
+import { getVisitorId } from './visitor';
+
 export interface LikesData {
   slug: string;
   likeCount: number;
@@ -24,8 +26,12 @@ export interface AdminCommentData {
   ipAddress: string;
 }
 
+const visitorHeaders = (): Record<string, string> => ({
+  'X-Visitor-Id': getVisitorId(),
+});
+
 export const fetcher = async (url: string) => {
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: visitorHeaders() });
   if (!res.ok) {
     if (res.status === 401) {
       throw new Error('Unauthorized');
@@ -38,11 +44,11 @@ export const fetcher = async (url: string) => {
 export const api = {
   likes: {
     get: (slug: string) => `/api/v1/likes?slug=${slug}`,
-    toggle: async (slug: string, token: string): Promise<LikesData> => {
+    toggle: async (slug: string): Promise<LikesData> => {
       const res = await fetch('/api/v1/likes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, token }),
+        headers: { 'Content-Type': 'application/json', ...visitorHeaders() },
+        body: JSON.stringify({ slug }),
       });
       if (!res.ok) throw new Error('Failed to toggle like');
       return res.json();
@@ -59,17 +65,17 @@ export const api = {
     }) => {
       const res = await fetch('/api/v1/comments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...visitorHeaders() },
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error('Failed to submit comment');
       return res.json();
     },
-    toggleLike: async (commentId: string, slug: string, token: string): Promise<CommentData> => {
+    toggleLike: async (commentId: string, slug: string): Promise<CommentData> => {
       const res = await fetch(`/api/v1/comments/${commentId}/like`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, token }),
+        headers: { 'Content-Type': 'application/json', ...visitorHeaders() },
+        body: JSON.stringify({ slug }),
       });
       if (!res.ok) throw new Error('Failed to toggle comment like');
       return res.json();

@@ -1,14 +1,10 @@
 import useSWR from 'swr';
-import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { api, fetcher, type LikesData } from '../../api';
 
 export function Likes({ slug }: { slug: string }) {
   const { data: likes, mutate } = useSWR<LikesData>(api.likes.get(slug), fetcher);
-  const { executeRecaptcha } = useGoogleReCaptcha();
 
   const toggleLike = async () => {
-    const token = executeRecaptcha ? await executeRecaptcha('like') : 'dummy-token';
-    
     // Optimistic UI update
     const prevLikes = likes;
     if (likes) {
@@ -23,7 +19,7 @@ export function Likes({ slug }: { slug: string }) {
     }
 
     try {
-      const updatedLikes = await api.likes.toggle(slug, token);
+      const updatedLikes = await api.likes.toggle(slug);
       mutate(updatedLikes, false);
       
       // Track custom interaction event

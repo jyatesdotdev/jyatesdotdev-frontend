@@ -24,7 +24,7 @@ export function Contact() {
     setErrorMessage('');
 
     try {
-      const recaptchaToken = executeRecaptcha ? await executeRecaptcha('contact_form') : 'dummy-token';
+      const recaptchaToken = executeRecaptcha ? await executeRecaptcha('contact_form').catch(() => 'dummy-token') : 'dummy-token';
       
       const response = await fetch('/api/v1/contact', {
         method: 'POST',
