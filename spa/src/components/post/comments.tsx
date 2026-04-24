@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
-import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { api, fetcher, type CommentData } from '../../api';
 
 function formatDate(date: string) {
@@ -16,22 +15,20 @@ export function Comments({ slug }: { slug: string }) {
   const { data: comments, mutate } = useSWR<CommentData[]>(api.comments.get(slug), fetcher);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const { executeRecaptcha } = useGoogleReCaptcha();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     setStatus('idle');
     const formData = new FormData(e.currentTarget);
-    const token = executeRecaptcha ? await executeRecaptcha('comment') : 'dummy-token';
 
     try {
       await api.comments.create({
         slug,
-        token,
         authorName: formData.get('authorName') as string,
         authorEmail: formData.get('authorEmail') as string,
         content: formData.get('content') as string,
+        website: formData.get('website') as string,
       });
 
       (e.target as HTMLFormElement).reset();
@@ -62,6 +59,7 @@ export function Comments({ slug }: { slug: string }) {
       )}
       
       <form onSubmit={handleSubmit} className="space-y-4">
+        <input type="text" name="website" className="hidden" tabIndex={-1} autoComplete="off" aria-hidden="true" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <input
             required

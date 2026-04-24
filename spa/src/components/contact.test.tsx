@@ -3,14 +3,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Contact } from './contact';
 
-// Mock useGoogleReCaptcha
-const mockExecuteRecaptcha = vi.fn().mockResolvedValue('test-token');
-vi.mock('react-google-recaptcha-v3', () => ({
-  useGoogleReCaptcha: () => ({
-    executeRecaptcha: mockExecuteRecaptcha,
-  }),
-}));
-
 // Mock fetch
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -51,14 +43,13 @@ describe('Contact', () => {
     fireEvent.click(screen.getByRole('button', { name: /send/i }));
 
     await waitFor(() => {
-      expect(mockExecuteRecaptcha).toHaveBeenCalledWith('contact_form');
       expect(mockFetch).toHaveBeenCalledWith('/api/v1/contact', expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
           name: 'John Doe',
           email: 'john@example.com',
           message: 'Hello there',
-          recaptchaToken: 'test-token',
+          website: '',
         }),
       }));
     });

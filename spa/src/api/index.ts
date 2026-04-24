@@ -58,10 +58,10 @@ export const api = {
     get: (slug: string) => `/api/v1/comments?slug=${slug}`,
     create: async (data: {
       slug: string;
-      token: string;
       authorName: string;
       authorEmail: string;
       content: string;
+      website?: string;
     }) => {
       const res = await fetch('/api/v1/comments', {
         method: 'POST',

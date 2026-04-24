@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { SEO } from './seo';
 
 export function Contact() {
-  const { executeRecaptcha } = useGoogleReCaptcha();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -24,8 +22,6 @@ export function Contact() {
     setErrorMessage('');
 
     try {
-      const recaptchaToken = executeRecaptcha ? await executeRecaptcha('contact_form').catch(() => 'dummy-token') : 'dummy-token';
-      
       const response = await fetch('/api/v1/contact', {
         method: 'POST',
         headers: {
@@ -33,7 +29,7 @@ export function Contact() {
         },
         body: JSON.stringify({
           ...formData,
-          recaptchaToken,
+          website: (document.querySelector('input[name="website"]') as HTMLInputElement)?.value || '',
         }),
       });
 
@@ -73,6 +69,7 @@ export function Contact() {
       ) : null}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        <input type="text" name="website" className="hidden" tabIndex={-1} autoComplete="off" aria-hidden="true" />
         <div>
           <label htmlFor="name" className="block text-sm font-medium mb-2">
             Name
@@ -130,11 +127,6 @@ export function Contact() {
         </button>
       </form>
 
-      <p className="mt-6 text-xs text-neutral-500 dark:text-neutral-400">
-        This site is protected by reCAPTCHA and the Google{' '}
-        <a href="https://policies.google.com/privacy" className="underline">Privacy Policy</a> and{' '}
-        <a href="https://policies.google.com/terms" className="underline">Terms of Service</a> apply.
-      </p>
     </section>
   );
 }

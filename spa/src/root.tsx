@@ -10,7 +10,6 @@ import { HelmetProvider } from "react-helmet-async";
 import type { Route } from "./+types/root";
 import { Navbar } from "./components/nav";
 import Footer from "./components/footer";
-import { ReCaptchaProvider } from "./components/recaptcha-provider";
 import { ThemeProvider } from "./components/theme-provider";
 import { Analytics } from "./components/analytics";
 import { SWRConfig } from "swr";
@@ -52,7 +51,6 @@ export default function App() {
           );
         },
       }}>
-        <ReCaptchaProvider>
           <div 
             data-testid="app-container" 
             className="font-sans antialiased text-black bg-white dark:text-white dark:bg-black min-h-screen flex flex-col"
@@ -64,7 +62,6 @@ export default function App() {
             </main>
             <Analytics />
           </div>
-        </ReCaptchaProvider>
       </SWRConfig>
     </ThemeProvider>
   );
