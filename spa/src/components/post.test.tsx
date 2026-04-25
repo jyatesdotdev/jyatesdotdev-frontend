@@ -159,7 +159,7 @@ describe('Post', () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/Comment submitted! It will appear once approved/i)).toBeInTheDocument();
+      expect(screen.getByText(/Comment posted!/i)).toBeInTheDocument();
     });
   });
 

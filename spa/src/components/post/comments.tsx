@@ -33,6 +33,7 @@ export function Comments({ slug }: { slug: string }) {
 
       (e.target as HTMLFormElement).reset();
       setStatus('success');
+      mutate();
     } catch (err) {
       setStatus('error');
       (window as any).awsRum?.recordError(err as Error);
@@ -48,7 +49,7 @@ export function Comments({ slug }: { slug: string }) {
       
       {status === 'success' && (
         <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200">
-          <p className="text-sm font-medium">Comment submitted! It will appear once approved.</p>
+          <p className="text-sm font-medium">Comment posted!</p>
         </div>
       )}
 
