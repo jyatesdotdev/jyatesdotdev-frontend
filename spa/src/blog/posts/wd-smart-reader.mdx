@@ -1,0 +1,110 @@
+---
+title: "Reading SMART Data from WD External Drives on macOS (Without Kernel Extensions)"
+publishedAt: "2026-05-24"
+summary:
+  "How I reverse-engineered WD's proprietary USB bridge protocol to build a CLI tool that reads SMART data from MyBook drives on Apple Silicon — no kext, no WD app required."
+tags:
+  - projects
+  - macos
+  - hardware
+  - ai-generated
+---
+
+> **Note:** This post was generated with AI assistance (Claude/Kiro). It documents a real exploration session where I worked with an AI agent to reverse-engineer WD's SES protocol and build a working tool. My other blog posts are written entirely by hand — AI-generated content will always be tagged and disclosed.
+
+---
+
+### The Problem
+
+If you've ever plugged a WD MyBook or Elements drive into your Mac and tried to check its SMART health data, you've hit a wall. `smartctl` returns "Operation not supported by device." The popular OS-X-SAT-SMART-Driver kext hasn't been updated since 2016 and doesn't work on Apple Silicon. WD Drive Utilities has a GUI, but no CLI — and no way to script or automate health checks.
+
+The root cause: WD's USB-SATA bridge firmware intentionally blocks standard ATA SMART passthrough commands. Unlike generic USB enclosures that support SAT (SCSI-ATA Translation), WD uses a proprietary protocol that only their own software knows how to speak.
+
+### The Discovery
+
+I started by looking at what WD Drive Utilities actually does. The app bundles a framework called `WDUtility.framework` with public Objective-C headers — including methods like `getSmartData:forSlot:error:` and `diagStartExtTest:`. The headers revealed that WD tunnels SMART data through **SCSI diagnostic pages** on the enclosure's **SES (SCSI Enclosure Services)** interface.
+
+Every WD external enclosure exposes two SCSI logical units:
+1. **LUN 0** — the disk itself (what shows up as `/dev/diskN`)
+2. **SES Device** — a management interface for the enclosure
+
+The SES device accepts `RECEIVE DIAGNOSTIC RESULTS` commands with vendor-specific page codes:
+
+| Page | Purpose |
+|------|---------|
+| 0x83 | Encryption status |
+| 0x84 | SMART threshold status |
+| 0x85 | Full 512-byte SMART attribute data |
+| 0x86 | Temperature and fan condition |
+
+The SMART data on page 0x85 is the exact same 512-byte ATA SMART READ DATA structure — just wrapped in a SCSI diagnostic page header.
+
+### Building the Tool
+
+With this knowledge, I wrote a macOS CLI tool in Objective-C that:
+
+1. Finds the WD SES device via IOKit's `IOSCSIPeripheralDeviceNub` matching
+2. Obtains exclusive SCSI access through `SCSITaskDeviceInterface`
+3. Sends `RECEIVE DIAGNOSTIC RESULTS` commands to read SMART data
+4. Parses the standard ATA SMART attribute table
+
+No kernel extension. No framework loading. Just standard IOKit userspace SCSI task submission — the same API any app can use with root privileges.
+
+### Vendor Quirks
+
+Along the way, I discovered that WD's SES implementation has non-standard behaviors:
+
+**Self-test initiation:** The SCSI spec says `SEND DIAGNOSTIC` should have both the self-test code (bits 7:5) AND the SelfTest bit (bit 2) set. WD's bridge rejects this with ILLEGAL REQUEST. It only accepts the self-test code *without* the SelfTest bit — a quirk that took trial-and-error to figure out.
+
+**Status reporting:** The self-test log (LOG SENSE page 0x10) works for detecting running/completed/failed states, but the "accumulated power-on hours" field is always zero. The bridge doesn't populate it when tunneling through SES.
+
+**SMART status word:** Page 0x84 returns a status like `0xC24F` even on healthy drives. This is the SES page format, not a real ATA SMART threshold-exceeded flag. Always check individual attributes instead.
+
+### What the Tool Does
+
+```
+$ sudo wd_smart info
+Device: WD SES Device
+
+Vendor:   WD
+Product:  SES Device
+Firmware: 1031
+Serial:   3GKPGAYE
+RPM:      7200
+Capacity: 18.00 TB (35156656128 blocks x 512 bytes)
+Port:     USB3.0 (active)
+Encrypt:  Off
+```
+
+```
+$ sudo wd_smart smart
+SMART Status: CHECK (see attributes) (0xC24F)
+
+ID#  ATTRIBUTE_NAME                        VALUE   WORST RAW_VALUE
+1    Raw Read Error Rate                     100     100 0
+5    Reallocated Sectors Count               100     100 0
+9    Power-On Hours                          100     100 891
+22   Current Helium Level                    100     100 100
+194  Temperature                              45      45 36
+197  Current Pending Sector Count            100     100 0
+198  Offline Uncorrectable                   100     100 0
+```
+
+Full command set: `smart`, `info`, `short-test`, `long-test`, `abort-test`, `status`, `temp`, `sleep`, `power-off`, `erase`, `secure-erase`.
+
+### Why This Matters
+
+There was no existing solution for this on modern macOS:
+
+- **smartctl** — fails on WD USB bridges
+- **OS-X-SAT-SMART-Driver** — dead since 2016, kext-based, incompatible with Apple Silicon and WD enclosures
+- **Seagate openSeaChest** — can't get through WD's proprietary bridge
+- **WD Drive Utilities** — GUI only, no CLI, no scripting
+
+If you have a WD external drive and want to monitor its health from the command line on an Apple Silicon Mac, this is (as far as I can tell) the only tool that works.
+
+### Get It
+
+The tool is open source (MIT): [github.com/jyatesdotdev/wd-smart-reader](https://github.com/jyatesdotdev/wd-smart-reader)
+
+Build with `make`, run with `sudo ./wd_smart`. Zero dependencies beyond Xcode Command Line Tools.
