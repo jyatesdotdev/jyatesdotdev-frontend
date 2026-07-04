@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { useTheme } from '../theme-provider';
 import { runCommand } from './terminal-commands';
 import { loadUserFiles, saveUserFiles } from './user-files';
+import { api, fetcher, type GeoData } from '../../api';
 
 const PROMPT = 'guest@jyates.dev:~$';
 
@@ -84,6 +85,12 @@ export function Terminal({ onClose }: { onClose: () => void }) {
       files: userFiles,
       writeFile,
       deleteFile,
+      fetchGeo: () => fetcher(api.geo.get()) as Promise<GeoData>,
+      runAsync: (task) => {
+        task().then((lines) => {
+          if (lines.length > 0) append('out', lines);
+        });
+      },
     });
     if (output.length > 0) append('out', output);
   }

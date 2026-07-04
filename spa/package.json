@@ -26,6 +26,7 @@
     "@react-router/serve": "^8.1.0",
     "@tailwindcss/vite": "^4.2.2",
     "aws-rum-web": "^2.1.0",
+    "d3-geo": "^3.1.1",
     "isbot": "^5.1.38",
     "plantuml-encoder": "^1.4.0",
     "react": "^19.2.4",
@@ -33,7 +34,9 @@
     "react-router": "^8.1.0",
     "sugar-high": "^1.1.0",
     "swr": "^2.4.1",
-    "tailwindcss": "^4.2.2"
+    "tailwindcss": "^4.2.2",
+    "topojson-client": "^3.1.0",
+    "world-atlas": "^2.0.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
@@ -44,10 +47,13 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "@types/d3-geo": "^3.1.0",
+    "@types/geojson": "^7946.0.16",
     "@types/mdx": "^2.0.13",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/topojson-client": "^3.1.5",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.4",
     "eslint": "^10.6.0",

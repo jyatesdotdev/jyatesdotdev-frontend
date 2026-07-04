@@ -39,7 +39,20 @@
   entry to its `TOOLS` array** (id, name, windowTitle, render). The dropdown and the
   open window render in portals (fixed positioning) because the nav container's
   `overflow-auto` would clip absolutely-positioned children. Window state lives here
-  so an open tool survives route changes (the navbar never unmounts).
+  so an open tool survives route changes (the navbar never unmounts). Heavy tools
+  (e.g. the visitor map) are `lazy()`-imported and wrapped in `<Suspense>` so they
+  code-split out of the main chunk.
+- `visitor-map.tsx` — world map of visitor hits (default export, lazy-loaded).
+  Renders an SVG choropleth with `d3-geo` (`geoNaturalEarth1`) over bundled
+  `world-atlas/countries-110m.json`; TopoJSON numeric feature ids are mapped to
+  alpha-2 via `iso-countries.ts` (`NUMERIC_TO_ALPHA2`). Data comes from SWR
+  `GET /api/v1/visits`; the `you` field highlights the caller's country. No runtime
+  fetch of map data (bundled), so no CSP change needed. Country **names** come from
+  `iso-countries.ts` (`ALPHA2_TO_NAME`), not the API — CloudFront only resolves a
+  country name/city for some IPs, so naming client-side keeps labels correct.
+  `iso-countries.ts` is lightweight static data (numeric↔alpha-2 map, name map,
+  `flagEmoji()`) and deliberately does NOT import world-atlas, so the terminal reuses
+  it without pulling in the map bundle.
 - `tool-window.tsx` — generic draggable OS-style window (pointer events + portal):
   red closes, yellow shades, green/double-click maximizes, Escape closes. Reuse it
   for every tool; put tool-specific UI in its own component.
@@ -48,6 +61,11 @@
   `TerminalContext`, so commands are unit-tested without rendering
   (`terminal-commands.test.ts`). New commands go in the `switch` there; also update
   the `HELP` text. jsdom quirk: use `scrollTop =` assignments, not `scrollTo()`.
+  **Async commands** (e.g. `whereami`) stay pure: the command calls
+  `ctx.runAsync(task)` and returns an immediate status line; `task` uses injected
+  async deps (`ctx.fetchGeo`) and returns lines that the terminal appends when they
+  resolve. Keep the formatting in a separate exported pure fn (`formatGeo`) so it's
+  unit-tested without a promise.
 - `user-files.ts` — user-created terminal files and directories (`touch`, `mkdir`,
   `echo >`, `rm`, `rmdir`) persisted to localStorage key `jyates-jsh-files`. Flat
   store: directory keys end with `/` (S3-style); validation/quotas live in

@@ -44,4 +44,45 @@ test.describe('Tools', () => {
     await page.getByRole('button', { name: 'Close window' }).click();
     await expect(dialog).not.toBeVisible();
   });
+
+  test('whereami reflects the edge-resolved location', async ({ page }) => {
+    await page.route('**/api/v1/geo', (route) =>
+      route.fulfill({
+        json: { country: 'US', countryName: 'United States', city: 'Seattle', timeZone: 'America/Los_Angeles' },
+      })
+    );
+    await page.goto('/');
+    await page.getByRole('button', { name: 'tools' }).click();
+    await page.getByRole('menuitem', { name: 'terminal' }).click();
+
+    await page.getByLabel('Terminal input').fill('whereami');
+    await page.keyboard.press('Enter');
+
+    const dialog = page.getByRole('dialog', { name: /jsh/ });
+    await expect(dialog).toContainText('Seattle, United States');
+  });
+
+  test('visitor map renders the world map and country counts', async ({ page }) => {
+    await page.route('**/api/v1/visits', (route) =>
+      route.fulfill({
+        json: {
+          total: 42,
+          you: 'US',
+          countries: [
+            { country: 'US', countryName: 'United States', count: 30 },
+            { country: 'DE', countryName: 'Germany', count: 12 },
+          ],
+        },
+      })
+    );
+    await page.goto('/');
+    await page.getByRole('button', { name: 'tools' }).click();
+    await page.getByRole('menuitem', { name: 'visitor map' }).click();
+
+    const dialog = page.getByRole('dialog', { name: /visitors around the world/ });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('42 hits from 2 countries');
+    await expect(dialog.getByRole('img', { name: /world map/i })).toBeVisible();
+    await expect(dialog).toContainText('United States');
+  });
 });

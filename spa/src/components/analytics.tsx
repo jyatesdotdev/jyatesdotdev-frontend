@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router';
+import { api } from '../api';
+
+const VISIT_BEACON_KEY = 'jyatesdotdev-visit-recorded';
 
 interface RumLike {
   recordPageView(path: string): void;
@@ -111,6 +114,20 @@ export function Analytics() {
   useEffect(() => {
     window.awsRumInstance?.recordPageView(location.pathname);
   }, [location.pathname]);
+
+  // Record one geo hit per browser session for the visitor map. The backend
+  // derives the country from CloudFront edge headers (no-op without them) and
+  // rate-limits per IP, so this is a fire-and-forget beacon.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (sessionStorage.getItem(VISIT_BEACON_KEY)) return;
+      sessionStorage.setItem(VISIT_BEACON_KEY, '1');
+    } catch {
+      // sessionStorage unavailable (private mode) — fall through and still beacon once
+    }
+    api.visits.record().catch(() => {});
+  }, []);
 
   return null;
 }

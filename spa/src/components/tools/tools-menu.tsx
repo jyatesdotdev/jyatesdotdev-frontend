@@ -1,13 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ToolWindow } from './tool-window';
 import { Terminal } from './terminal';
+
+// The visitor map bundles world-atlas TopoJSON + d3-geo (~150KB); keep it out
+// of the main chunk and only fetch it when the tool is first opened.
+const VisitorMap = lazy(() => import('./visitor-map'));
 
 interface Tool {
   id: string;
   name: string;
   windowTitle: string;
   render: (close: () => void) => React.ReactNode;
+}
+
+function ToolFallback({ label }: { label: string }) {
+  return (
+    <div className="h-full flex items-center justify-center bg-neutral-950 text-neutral-500 font-mono text-xs">
+      {label}
+    </div>
+  );
 }
 
 /** Registry of tools shown in the dropdown. Add new tools here. */
@@ -17,6 +29,16 @@ const TOOLS: Tool[] = [
     name: 'terminal',
     windowTitle: 'guest@jyates.dev — jsh',
     render: (close) => <Terminal onClose={close} />,
+  },
+  {
+    id: 'visitor-map',
+    name: 'visitor map',
+    windowTitle: 'visitors around the world',
+    render: () => (
+      <Suspense fallback={<ToolFallback label="loading map…" />}>
+        <VisitorMap />
+      </Suspense>
+    ),
   },
 ];
 

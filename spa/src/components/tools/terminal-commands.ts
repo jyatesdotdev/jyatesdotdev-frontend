@@ -1,5 +1,7 @@
 import { projects } from '../../data/projects';
 import { getPosts } from '../../blog/posts';
+import type { GeoData } from '../../api';
+import { flagEmoji, ALPHA2_TO_NAME } from './iso-countries';
 
 /**
  * Side effects the terminal can trigger. Kept behind an interface so the
@@ -16,6 +18,26 @@ export interface TerminalContext {
   files: Record<string, string>;
   writeFile: (name: string, content: string) => void;
   deleteFile: (name: string) => void;
+  /** Fetches the caller's edge-resolved location (GET /api/v1/geo) */
+  fetchGeo: () => Promise<GeoData>;
+  /** Schedules async output; resolved lines are appended when ready */
+  runAsync: (task: () => Promise<string[]>) => void;
+}
+
+/** Formats a geo lookup into terminal lines. Pure, so it's unit-tested directly. */
+export function formatGeo(geo: GeoData): string[] {
+  if (!geo.country) {
+    return ['whereami: location unavailable (running locally, or behind a proxy?)'];
+  }
+  const countryName = geo.countryName || ALPHA2_TO_NAME[geo.country] || geo.country;
+  const place = [geo.city, countryName].filter(Boolean).join(', ');
+  const lines = [`You appear to be visiting from ${place} ${flagEmoji(geo.country)}`.trim()];
+  if (geo.timeZone) lines.push(`  time zone: ${geo.timeZone}`);
+  if (geo.latitude && geo.longitude) {
+    lines.push(`  approx:    ${geo.latitude}, ${geo.longitude}`);
+  }
+  lines.push("  (open the 'visitor map' tool to see everyone else)");
+  return lines;
 }
 
 const MAX_USER_FILES = 50;
@@ -118,6 +140,7 @@ const HELP: string[] = [
   '  rm <path>         remove a file you created (-r for directories)',
   '  rmdir <dir>       remove an empty directory',
   '  whoami            who are you?',
+  '  whereami          show your (approximate) location',
   '  date              current date and time',
   '  pwd               print working directory',
   '  history           command history',
@@ -227,6 +250,17 @@ export function runCommand(rawInput: string, ctx: TerminalContext): string[] {
 
     case 'whoami':
       return ['guest'];
+
+    case 'whereami': {
+      ctx.runAsync(async () => {
+        try {
+          return formatGeo(await ctx.fetchGeo());
+        } catch {
+          return ['whereami: could not reach the geo service'];
+        }
+      });
+      return ['locating…'];
+    }
 
     case 'pwd':
       return ['/home/guest'];

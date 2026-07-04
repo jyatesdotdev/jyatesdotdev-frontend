@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { runCommand, type TerminalContext } from './terminal-commands';
+import { runCommand, formatGeo, type TerminalContext } from './terminal-commands';
 
 function makeContext(overrides: Partial<TerminalContext> = {}): TerminalContext {
   return {
@@ -12,6 +12,8 @@ function makeContext(overrides: Partial<TerminalContext> = {}): TerminalContext 
     files: {},
     writeFile: vi.fn(),
     deleteFile: vi.fn(),
+    fetchGeo: vi.fn().mockResolvedValue({ country: '' }),
+    runAsync: vi.fn(),
     ...overrides,
   };
 }
@@ -273,5 +275,56 @@ describe('runCommand', () => {
     const output = runCommand('neofetch', makeContext({ theme: 'light' })).join('\n');
     expect(output).toContain('jyates.dev');
     expect(output).toContain('light');
+  });
+
+  it('whereami prints a status line and schedules an async lookup', () => {
+    const ctx = makeContext();
+    expect(runCommand('whereami', ctx)).toEqual(['locating…']);
+    expect(ctx.runAsync).toHaveBeenCalledOnce();
+  });
+
+  it('whereami async task formats the fetched location', async () => {
+    const ctx = makeContext({
+      fetchGeo: vi.fn().mockResolvedValue({
+        country: 'US',
+        countryName: 'United States',
+        city: 'Seattle',
+        timeZone: 'America/Los_Angeles',
+      }),
+    });
+    runCommand('whereami', ctx);
+    const task = (ctx.runAsync as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const lines = await task();
+    expect(lines[0]).toContain('Seattle, United States');
+    expect(lines.join('\n')).toContain('America/Los_Angeles');
+  });
+
+  it('whereami async task handles fetch failure gracefully', async () => {
+    const ctx = makeContext({ fetchGeo: vi.fn().mockRejectedValue(new Error('offline')) });
+    runCommand('whereami', ctx);
+    const task = (ctx.runAsync as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect((await task())[0]).toMatch(/could not reach the geo service/);
+  });
+});
+
+describe('formatGeo', () => {
+  it('reports an unavailable location when there is no country', () => {
+    expect(formatGeo({ country: '' })[0]).toMatch(/location unavailable/);
+  });
+
+  it('includes city, country name, and a flag emoji', () => {
+    const lines = formatGeo({ country: 'DE', countryName: 'Germany', city: 'Berlin' });
+    expect(lines[0]).toContain('Berlin, Germany');
+    expect(lines[0]).toContain('🇩🇪');
+  });
+
+  it('omits lat/long when only one is present', () => {
+    const lines = formatGeo({ country: 'US', latitude: '47.6' }).join('\n');
+    expect(lines).not.toContain('approx');
+  });
+
+  it('enriches the country name from the code when the API omits it', () => {
+    // CloudFront often sends only the country code for datacenter IPs
+    expect(formatGeo({ country: 'GB' })[0]).toContain('United Kingdom');
   });
 });

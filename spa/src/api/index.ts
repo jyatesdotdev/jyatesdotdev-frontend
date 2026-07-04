@@ -26,6 +26,27 @@ export interface AdminCommentData {
   ipAddress: string;
 }
 
+export interface GeoData {
+  country: string;
+  countryName?: string;
+  city?: string;
+  timeZone?: string;
+  latitude?: string;
+  longitude?: string;
+}
+
+export interface CountryVisits {
+  country: string;
+  countryName: string;
+  count: number;
+}
+
+export interface VisitStats {
+  total: number;
+  countries: CountryVisits[];
+  you?: string;
+}
+
 const visitorHeaders = (): Record<string, string> => ({
   'X-Visitor-Id': getVisitorId(),
 });
@@ -79,6 +100,16 @@ export const api = {
       });
       if (!res.ok) throw new Error('Failed to toggle comment like');
       return res.json();
+    },
+  },
+  geo: {
+    get: () => '/api/v1/geo',
+  },
+  visits: {
+    get: () => '/api/v1/visits',
+    record: async (): Promise<void> => {
+      // Fire-and-forget beacon; the backend no-ops without geo headers
+      await fetch('/api/v1/visits', { method: 'POST' });
     },
   },
   admin: {
