@@ -23,7 +23,7 @@
     "@fontsource/geist-mono": "^5.2.7",
     "@fontsource/geist-sans": "^5.2.5",
     "@react-router/node": "^7.18.1",
-    "@react-router/serve": "^7.18.1",
+    "@react-router/serve": "^8.1.0",
     "@tailwindcss/vite": "^4.2.2",
     "aws-rum-web": "^2.1.0",
     "isbot": "^5.1.38",
