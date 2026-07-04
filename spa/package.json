@@ -69,6 +69,9 @@
   "overrides": {
     "tsconfck": {
       "typescript": "$typescript"
+    },
+    "aws-rum-web": {
+      "uuid": "^11.1.1"
     }
   }
 }
