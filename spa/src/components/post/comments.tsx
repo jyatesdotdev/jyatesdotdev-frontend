@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import useSWR from 'swr';
 import { api, fetcher, type CommentData } from '../../api';
 
@@ -135,9 +135,13 @@ function CommentItem({
     }
   };
 
-  useEffect(() => {
+  // Re-sync local optimistic state when SWR revalidation hands us a fresh
+  // comment object (React's "adjust state during render" pattern).
+  const [prevInitial, setPrevInitial] = useState(initialComment);
+  if (initialComment !== prevInitial) {
+    setPrevInitial(initialComment);
     setComment(initialComment);
-  }, [initialComment]);
+  }
 
   return (
     <div className="p-4 rounded-lg bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800">

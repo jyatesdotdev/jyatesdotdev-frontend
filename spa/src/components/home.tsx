@@ -13,9 +13,8 @@ export function Home() {
 
   return (
     <section className="w-full">
-      <SEO 
-        title="Jonathan Yates" 
-        description="Software Development Engineer at Amazon. Passionate about software development, cloud technologies, and continuous learning." 
+      <SEO
+        description="Software Development Engineer at Amazon. Passionate about software development, cloud technologies, and continuous learning."
       />
       {/* Profile Section */}
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6 lg:gap-10 mb-12">

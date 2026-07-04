@@ -14,7 +14,7 @@ describe('Home', () => {
     expect(screen.getByText(/Software Development Engineer/i)).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(document.title).toBe('Jonathan Yates | Jonathan Yates');
+      expect(document.title).toBe('Jonathan Yates');
     });
 
     const metaDescription = document.querySelector('meta[name="description"]');
