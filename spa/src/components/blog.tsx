@@ -1,4 +1,4 @@
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router';
 import { getPosts } from '../blog/posts';
 import { SEO } from './seo';
 

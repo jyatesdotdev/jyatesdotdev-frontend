@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { SEO } from './seo';
 import { libraryItems, type LibraryItem } from '../data/library';
 import { getPosts } from '../blog/posts';

@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router';
 import { Home } from './home';
 
 describe('Home', () => {

@@ -1,5 +1,5 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import { SWRConfig } from 'swr';
 import { Post } from './post';
 import { describe, it, expect, vi, beforeEach } from 'vitest';

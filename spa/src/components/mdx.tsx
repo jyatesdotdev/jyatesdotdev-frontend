@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- MDX component map intentionally exports a non-component object */
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { highlight } from 'sugar-high';
 import { PlantUML } from './plantuml';
 

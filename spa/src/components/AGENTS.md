@@ -8,7 +8,7 @@
 - Styling is inline Tailwind utility classes with `dark:` variants. No CSS modules,
   no styled-components. Dark mode is a `dark` class on `<html>` set by `theme-provider.tsx`
   (persisted to localStorage key `jyates-theme`).
-- Navigation uses `react-router-dom` (`<Link>`, `useParams`, `useLocation`).
+- Navigation imports come from `react-router` (`<Link>`, `useParams`, `useLocation`) — the `react-router-dom` package was removed in v8.
 - Data fetching uses SWR against `../api/`.
 
 ## Load-bearing components

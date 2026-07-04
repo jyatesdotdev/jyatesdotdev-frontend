@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import { getPostBySlug } from '../blog/posts';
 import { MDXComponents } from './mdx';
 import { SEO } from './seo';

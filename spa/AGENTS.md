@@ -1,6 +1,6 @@
 # spa/ — the jyates.dev app
 
-React 19.2 + React Router 7 in **framework mode with `ssr: false`** (pure SPA, prerendered
+React 19.2 + React Router 8 in **framework mode with `ssr: false`** (pure SPA, prerendered
 to static HTML). Vite 8, TypeScript 6, Tailwind CSS v4, MDX blog posts, Vitest 4 for unit
 tests, Playwright for visual e2e. ESM only (`"type": "module"`).
 

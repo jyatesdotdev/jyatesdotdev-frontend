@@ -4,7 +4,7 @@ React SPA for [jyates.dev](https://jyates.dev) — prerendered static site serve
 
 ## Architecture
 
-- **Framework**: React 19 / React Router 7 (SPA mode, `ssr: false`)
+- **Framework**: React 19 / React Router 8 (SPA mode, `ssr: false`)
 - **Build**: Vite with prerendering — generates static HTML for all routes at build time
 - **Styling**: Tailwind CSS v4
 - **Data Fetching**: SWR for API interactions (likes, comments)

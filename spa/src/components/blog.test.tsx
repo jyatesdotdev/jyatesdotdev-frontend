@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { BrowserRouter, MemoryRouter } from 'react-router-dom';
+import { BrowserRouter, MemoryRouter } from 'react-router';
 import { Blog } from './blog';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as posts from '../blog/posts';
