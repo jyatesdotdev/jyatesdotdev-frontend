@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router';
 import { useSyncExternalStore } from 'react';
 import { useTheme } from './theme-provider';
+import { ToolsMenu } from './tools/tools-menu';
 
 interface NavItem {
   name: string;
@@ -73,6 +74,7 @@ export function Navbar() {
                 </NavLink>
               );
             })}
+            <ToolsMenu />
           </div>
 
           <button

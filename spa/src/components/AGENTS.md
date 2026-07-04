@@ -32,3 +32,24 @@
   `jyatesdotdev-integration` specs.**
 - `contact.tsx` — submits via its own fetch with a hidden honeypot `website` input;
   there is no reCAPTCHA anywhere in the app.
+
+## tools/ — nav "tools" dropdown and floating tool windows
+
+- `tools-menu.tsx` — the "tools" entry in the navbar. **To add a new tool, add one
+  entry to its `TOOLS` array** (id, name, windowTitle, render). The dropdown and the
+  open window render in portals (fixed positioning) because the nav container's
+  `overflow-auto` would clip absolutely-positioned children. Window state lives here
+  so an open tool survives route changes (the navbar never unmounts).
+- `tool-window.tsx` — generic draggable OS-style window (pointer events + portal):
+  red closes, yellow shades, green/double-click maximizes, Escape closes. Reuse it
+  for every tool; put tool-specific UI in its own component.
+- `terminal.tsx` + `terminal-commands.ts` — the CLI emulator (`jsh`). Command logic
+  is a pure function (`runCommand(input, ctx)`) with side effects injected via
+  `TerminalContext`, so commands are unit-tested without rendering
+  (`terminal-commands.test.ts`). New commands go in the `switch` there; also update
+  the `HELP` text. jsdom quirk: use `scrollTop =` assignments, not `scrollTo()`.
+- `user-files.ts` — user-created terminal files and directories (`touch`, `mkdir`,
+  `echo >`, `rm`, `rmdir`) persisted to localStorage key `jyates-jsh-files`. Flat
+  store: directory keys end with `/` (S3-style); validation/quotas live in
+  `checkWrite()`/`validatePath()`. Built-ins are read-only; writes go through
+  `ctx.writeFile`/`ctx.deleteFile`.

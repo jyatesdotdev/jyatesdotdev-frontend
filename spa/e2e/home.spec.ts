@@ -9,7 +9,7 @@ test.describe('Home Page', () => {
     
     // Validate key content
     await expect(page.locator('h1').first()).toContainText('Jonathan Yates');
-    await expect(page.locator('h2').first()).toContainText('Senior Software Developer');
+    await expect(page.locator('h2').first()).toContainText('Software Development Engineer');
   });
 
   test('should navigate to the career page', async ({ page }) => {
