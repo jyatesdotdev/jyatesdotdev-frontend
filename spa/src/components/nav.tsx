@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { useTheme } from './theme-provider';
 
 interface NavItem {
@@ -28,20 +28,27 @@ const navItems: Record<string, NavItem> = {
   },
 };
 
+// Subscribe to the OS color-scheme preference. Only invoked on the client
+// (window is never touched at module scope; the server snapshot returns false).
+function subscribeToSystemTheme(callback: () => void) {
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  mq.addEventListener('change', callback);
+  return () => mq.removeEventListener('change', callback);
+}
+
+function getSystemPrefersDark() {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
 export function Navbar() {
   const { theme, setTheme } = useTheme();
-  const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('light');
-
-  useEffect(() => {
-    if (theme === 'system') {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      setResolvedTheme(mq.matches ? 'dark' : 'light');
-      const handler = (e: MediaQueryListEvent) => setResolvedTheme(e.matches ? 'dark' : 'light');
-      mq.addEventListener('change', handler);
-      return () => mq.removeEventListener('change', handler);
-    }
-    setResolvedTheme(theme);
-  }, [theme]);
+  const systemPrefersDark = useSyncExternalStore(
+    subscribeToSystemTheme,
+    getSystemPrefersDark,
+    () => false
+  );
+  const resolvedTheme: 'dark' | 'light' =
+    theme === 'system' ? (systemPrefersDark ? 'dark' : 'light') : theme;
 
   return (
     <aside className="mb-16 tracking-tight">

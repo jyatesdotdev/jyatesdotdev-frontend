@@ -7,30 +7,33 @@ type StatusFilter = 'pending' | 'approved' | 'rejected';
 
 export function Admin() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
+  const [actionError, setActionError] = useState<string | null>(null);
   const { data: comments, error, mutate, isLoading } = useSWR<AdminCommentData[]>(
-    api.admin.getComments(statusFilter), 
+    api.admin.getComments(statusFilter),
     fetcher
   );
 
   const updateStatus = async (commentId: string, slug: string, newStatus: 'approved' | 'rejected') => {
+    setActionError(null);
     // Optimistic UI update
     if (comments) {
       mutate(comments.filter(c => c.id !== commentId), false);
     }
-    
+
     try {
       await api.admin.updateStatus(commentId, slug, newStatus);
       mutate();
     } catch (err) {
-      alert('An error occurred while updating status.');
+      setActionError('An error occurred while updating status.');
       mutate(); // Revert
-      (window as any).awsRum?.recordError(err as Error);
+      window.awsRum?.recordError(err);
     }
   };
 
   const deleteComment = async (commentId: string, slug: string) => {
     if (!confirm('Are you sure you want to delete this comment?')) return;
-    
+
+    setActionError(null);
     if (comments) {
       mutate(comments.filter(c => c.id !== commentId), false);
     }
@@ -39,9 +42,9 @@ export function Admin() {
       await api.admin.deleteComment(commentId, slug);
       mutate();
     } catch (err) {
-      alert('An error occurred while deleting comment.');
+      setActionError('An error occurred while deleting comment.');
       mutate(); // Revert
-      (window as any).awsRum?.recordError(err as Error);
+      window.awsRum?.recordError(err);
     }
   };
 
@@ -49,7 +52,23 @@ export function Admin() {
     <section>
       <SEO title="Admin Dashboard" />
       <h1 className="font-semibold text-2xl mb-8 tracking-tighter">Admin Dashboard</h1>
-      
+
+      {actionError && (
+        <div
+          role="alert"
+          className="mb-8 flex items-start justify-between rounded-lg border border-red-200 bg-red-100 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-900/30 dark:text-red-400"
+        >
+          <span>{actionError}</span>
+          <button
+            onClick={() => setActionError(null)}
+            aria-label="Dismiss error"
+            className="ml-4 font-semibold hover:text-red-900 dark:hover:text-red-200"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <div className="flex space-x-4 mb-8">
         {(['pending', 'approved', 'rejected'] as const).map((status) => (
           <button

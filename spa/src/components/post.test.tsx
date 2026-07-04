@@ -22,13 +22,6 @@ vi.mock('../blog/posts', () => ({
   },
 }));
 
-// Mock the recaptcha hook
-vi.mock('react-google-recaptcha-v3', () => ({
-  useGoogleReCaptcha: () => ({
-    executeRecaptcha: vi.fn().mockResolvedValue('mock-token'),
-  }),
-}));
-
 // Mock the API calls
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -174,7 +167,7 @@ describe('Post', () => {
       userHasLiked: false
     };
 
-    mockFetch.mockImplementation((url, init) => {
+    mockFetch.mockImplementation((url) => {
       if (url.includes('/api/v1/likes')) {
         return Promise.resolve({
           ok: true,

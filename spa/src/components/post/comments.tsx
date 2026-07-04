@@ -36,7 +36,7 @@ export function Comments({ slug }: { slug: string }) {
       mutate();
     } catch (err) {
       setStatus('error');
-      (window as any).awsRum?.recordError(err as Error);
+      window.awsRum?.recordError(err);
     }
     setIsSubmitting(false);
   };
@@ -131,7 +131,7 @@ function CommentItem({
     } catch (err) {
       // Revert on error
       setComment(prevComment);
-      (window as any).awsRum?.recordError(err as Error);
+      window.awsRum?.recordError(err);
     }
   };
 

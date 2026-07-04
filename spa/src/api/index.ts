@@ -100,14 +100,4 @@ export const api = {
       if (!res.ok) throw new Error('Failed to delete comment');
     },
   },
-  contact: {
-    submit: async (data: { name: string; email: string; message: string; token: string }) => {
-      const res = await fetch('/api/v1/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error('Failed to submit contact form');
-    }
-  }
 };

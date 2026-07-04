@@ -15,8 +15,8 @@ function slugify(text) {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '-')       // Replace spaces with -
-    .replace(/[^\w\-]+/g, '')   // Remove all non-word chars
-    .replace(/\-\-+/g, '-');      // Replace multiple - with single -
+    .replace(/[^\w-]+/g, '')   // Remove all non-word chars
+    .replace(/--+/g, '-');      // Replace multiple - with single -
 }
 
 rl.question('Post Title: ', (title) => {

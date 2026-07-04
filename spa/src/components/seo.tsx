@@ -1,5 +1,3 @@
-import { Helmet } from 'react-helmet-async';
-
 interface SEOProps {
   title?: string;
   description?: string;
@@ -8,12 +6,14 @@ interface SEOProps {
   type?: string;
 }
 
-export function SEO({ 
-  title, 
-  description, 
-  image, 
-  url, 
-  type = 'website' 
+// React 19 hoists <title>/<meta>/<link> rendered anywhere in the tree into
+// <head>, both client-side and during prerendering — no Helmet needed.
+export function SEO({
+  title,
+  description,
+  image,
+  url,
+  type = 'website'
 }: SEOProps) {
   const siteName = 'Jonathan Yates';
   const fullTitle = title ? `${title} | ${siteName}` : siteName;
@@ -24,10 +24,10 @@ export function SEO({
   const ogImage = image ? (image.startsWith('http') ? image : `${siteUrl}${image}`) : `${siteUrl}/images/og/default.png`;
 
   return (
-    <Helmet>
+    <>
       <title>{fullTitle}</title>
       <meta name="description" content={metaDescription} />
-      
+
       {/* Open Graph */}
       <meta property="og:site_name" content={siteName} />
       <meta property="og:title" content={title || siteName} />
@@ -35,7 +35,7 @@ export function SEO({
       <meta property="og:url" content={fullUrl} />
       <meta property="og:type" content={type} />
       <meta property="og:image" content={ogImage} />
-      
+
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />
@@ -43,6 +43,6 @@ export function SEO({
       <meta name="twitter:image" content={ogImage} />
 
       <link rel="canonical" href={fullUrl} />
-    </Helmet>
+    </>
   );
 }

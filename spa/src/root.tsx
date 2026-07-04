@@ -6,7 +6,6 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
-import { HelmetProvider } from "react-helmet-async";
 import type { Route } from "./+types/root";
 import { Navbar } from "./components/nav";
 import Footer from "./components/footer";
@@ -31,9 +30,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <HelmetProvider>
-          {children}
-        </HelmetProvider>
+        {children}
         <ScrollRestoration />
         <Scripts />
       </body>
@@ -46,7 +43,7 @@ export default function App() {
     <ThemeProvider defaultTheme="system" storageKey="jyates-theme">
       <SWRConfig value={{
         onError: (error: Error, key: string) => {
-          (window as any).awsRum?.recordError(
+          window.awsRum?.recordError(
             error instanceof Error ? error : new Error(`SWR fetch failed: ${key}`)
           );
         },
@@ -79,7 +76,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         : error.statusText || details;
   } else if (error && error instanceof Error) {
     // Report rendering crashes to telemetry
-    (window as any).awsRum?.recordError(error);
+    window.awsRum?.recordError(error);
     if (import.meta.env.DEV) {
       details = error.message;
     }

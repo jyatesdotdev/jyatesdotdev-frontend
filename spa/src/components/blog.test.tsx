@@ -24,7 +24,7 @@ vi.mock('../blog/posts', () => ({
   ]),
 }));
 
-const mockLargePosts = Array.from({ length: 15 }, (_, i) => ({
+const mockLargePosts: posts.PostMetadata[] = Array.from({ length: 15 }, (_, i) => ({
   slug: `post-${i + 1}`,
   title: `Post ${i + 1}`,
   publishedAt: '2024-04-14',
@@ -80,7 +80,7 @@ describe('Blog', () => {
   });
 
   it('handles pagination', () => {
-    vi.mocked(posts.getPosts).mockReturnValue(mockLargePosts as any);
+    vi.mocked(posts.getPosts).mockReturnValue(mockLargePosts);
 
     render(
       <MemoryRouter initialEntries={['/blog']}>

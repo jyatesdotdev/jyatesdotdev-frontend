@@ -1,22 +1,23 @@
+/* eslint-disable react-refresh/only-export-components -- MDX component map intentionally exports a non-component object */
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { highlight } from 'sugar-high';
 import { PlantUML } from './plantuml';
 
-function Code({ children, ...props }: any) {
+function Code({ children, ...props }: React.ComponentPropsWithoutRef<'code'>) {
   if (typeof children === 'string') {
-    let codeHTML = highlight(children);
+    const codeHTML = highlight(children);
     return <code dangerouslySetInnerHTML={{ __html: codeHTML }} {...props} />;
   }
   return <code {...props}>{children}</code>;
 }
 
-function RoundedImage(props: any) {
+function RoundedImage(props: React.ComponentPropsWithoutRef<'img'>) {
   return <img className="rounded-lg" {...props} />;
 }
 
-function CustomLink(props: any) {
-  let href = props.href;
+function CustomLink(props: React.ComponentPropsWithoutRef<'a'>) {
+  const href = props.href ?? '';
 
   if (href.startsWith('/')) {
     return (
@@ -40,13 +41,13 @@ function slugify(str: string) {
     .trim() // Remove whitespace from both ends of a string
     .replace(/\s+/g, '-') // Replace spaces with -
     .replace(/&/g, '-and-') // Replace & with 'and'
-    .replace(/[^\w\-]+/g, '') // Remove all non-word characters except for -
-    .replace(/\-\-+/g, '-'); // Replace multiple - with single -
+    .replace(/[^\w-]+/g, '') // Remove all non-word characters except for -
+    .replace(/--+/g, '-'); // Replace multiple - with single -
 }
 
 function createHeading(level: number) {
   const Heading = ({ children }: { children: React.ReactNode }) => {
-    let slug = slugify(children as string);
+    const slug = slugify(children as string);
     return React.createElement(
       `h${level}`,
       { id: slug },

@@ -1,5 +1,5 @@
 import { useSearchParams, Link } from 'react-router-dom';
-import { getPosts, type PostMetadata } from '../blog/posts';
+import { getPosts } from '../blog/posts';
 import { SEO } from './seo';
 
 const POSTS_PER_PAGE = 10;

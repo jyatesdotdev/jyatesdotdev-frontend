@@ -33,12 +33,13 @@ export function Timeline({ items }: TimelineProps) {
       { threshold: 0.5 }
     );
 
-    itemRefs.current.forEach(ref => {
+    const observedElements = itemRefs.current;
+    observedElements.forEach(ref => {
       if (ref) observer.observe(ref);
     });
 
     return () => {
-      itemRefs.current.forEach(ref => {
+      observedElements.forEach(ref => {
         if (ref) observer.unobserve(ref);
       });
     };

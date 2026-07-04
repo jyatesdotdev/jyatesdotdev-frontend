@@ -1,18 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SEO } from './seo';
 import { libraryItems, type LibraryItem } from '../data/library';
 import { getPosts } from '../blog/posts';
 
 export function Home() {
-  const [randomLibraryItems, setRandomLibraryItems] = useState<LibraryItem[]>([]);
+  // Randomize library items once per mount (lazy initializer; SPA mode, so no hydration mismatch)
+  const [randomLibraryItems] = useState<LibraryItem[]>(() =>
+    [...libraryItems].sort(() => Math.random() - 0.5).slice(0, 3)
+  );
   const latestPosts = getPosts().slice(0, 3);
-
-  useEffect(() => {
-    // Client-side randomization of library items
-    const shuffled = [...libraryItems].sort(() => Math.random() - 0.5).slice(0, 3);
-    setRandomLibraryItems(shuffled);
-  }, []);
 
   return (
     <section className="w-full">

@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 import * as plantumlEncoder from 'plantuml-encoder';
+import { fnv1aHex } from '../lib/hash';
 
 const SERVER = 'https://www.plantuml.com/plantuml/svg/';
+
+interface PlantUmlEncoder {
+  encode(source: string): string;
+}
 
 export function PlantUML({ children }: { children: string }) {
   const [svg, setSvg] = useState<string | null>(null);
@@ -12,9 +17,19 @@ export function PlantUML({ children }: { children: string }) {
 
   useEffect(() => {
     if (!source) return;
-    const encoder = (plantumlEncoder as any).default || plantumlEncoder;
-    const encoded = encoder.encode(source);
-    fetch(`${SERVER}${encoded}`)
+    let url: string;
+    if (import.meta.env.PROD) {
+      // Prod: SVGs are prerendered by scripts/generate-diagrams.js at build
+      // time and served from our own origin.
+      url = `/diagrams/${fnv1aHex(source)}.svg`;
+    } else {
+      // Dev: render remotely via plantuml.com for a fast authoring loop.
+      // plantuml-encoder ships no types; handle CJS/ESM default-export interop
+      const mod = plantumlEncoder as PlantUmlEncoder & { default?: PlantUmlEncoder };
+      const encoder = mod.default ?? mod;
+      url = `${SERVER}${encoder.encode(source)}`;
+    }
+    fetch(url)
       .then((r) => {
         if (!r.ok) throw new Error(r.statusText);
         return r.text();

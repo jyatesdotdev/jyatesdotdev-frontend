@@ -5,6 +5,7 @@ export interface PostMetadata {
   publishedAt: string;
   summary: string;
   tags: string[];
+  draft?: boolean;
   slug: string;
 }
 
@@ -15,8 +16,10 @@ export interface PostModule {
 
 const posts = import.meta.glob<PostModule>('./posts/*.mdx', { eager: true });
 
-export function getPosts(): PostMetadata[] {
-  return Object.entries(posts)
+/** Builds the sorted post list from glob modules, excluding drafts. Exported for tests. */
+export function toPostList(modules: Record<string, PostModule>): PostMetadata[] {
+  return Object.entries(modules)
+    .filter(([, module]) => module.metadata.draft !== true)
     .map(([path, module]) => {
       const slug = path.replace('./posts/', '').replace('.mdx', '');
       return {
@@ -27,7 +30,27 @@ export function getPosts(): PostMetadata[] {
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
 }
 
+/**
+ * Resolves a single post module, gating drafts. Drafts are only served when
+ * `allowDrafts` is true (dev preview); in prod they must resolve to undefined
+ * because the MDX glob bundles every post and the SPA 404-fallback would
+ * otherwise render drafts client-side even without prerendered HTML.
+ * Exported for tests.
+ */
+export function resolvePostModule(
+  module: PostModule | undefined,
+  allowDrafts: boolean
+): PostModule | undefined {
+  if (!module) return undefined;
+  if (module.metadata.draft === true && !allowDrafts) return undefined;
+  return module;
+}
+
+export function getPosts(): PostMetadata[] {
+  return toPostList(posts);
+}
+
 export function getPostBySlug(slug: string): PostModule | undefined {
   const path = `./posts/${slug}.mdx`;
-  return posts[path];
+  return resolvePostModule(posts[path], import.meta.env.DEV);
 }

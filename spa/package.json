@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "react-router dev",
-    "build": "react-router build",
+    "build": "node scripts/generate-diagrams.js && react-router build",
     "postbuild": "node scripts/generate-assets.js",
     "new-post": "node scripts/new-post.js",
     "start": "react-router-serve ./build/server/index.js",
@@ -13,7 +13,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "e2e": "playwright test"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "dependencies": {
     "@fontsource/geist-mono": "^5.2.7",
@@ -26,8 +30,6 @@
     "plantuml-encoder": "^1.4.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-google-recaptcha-v3": "^1.11.0",
-    "react-helmet-async": "^3.0.0",
     "react-router": "^7.14.1",
     "react-router-dom": "^7.14.1",
     "sugar-high": "^1.1.0",

@@ -4,7 +4,7 @@ React SPA for [jyates.dev](https://jyates.dev) — prerendered static site serve
 
 ## Architecture
 
-- **Framework**: React 18 / React Router 7 (SPA mode, `ssr: false`)
+- **Framework**: React 19 / React Router 7 (SPA mode, `ssr: false`)
 - **Build**: Vite with prerendering — generates static HTML for all routes at build time
 - **Styling**: Tailwind CSS v4
 - **Data Fetching**: SWR for API interactions (likes, comments)
@@ -32,8 +32,12 @@ The frontend expects the API at `/api/v1/*`. For local development with a backen
 ```bash
 cd spa
 npm test              # Vitest unit/component tests
-npx playwright test   # E2E tests
+npm run lint          # ESLint
+npm run typecheck     # react-router typegen + tsc
+npm run e2e           # Playwright visual-regression tests (local, macOS snapshot baselines)
 ```
+
+Full-stack E2E (frontend + Go API + LocalStack) lives in the sibling `jyatesdotdev-integration` repo — run `npm run e2e` there instead.
 
 ## Deployment
 
@@ -43,12 +47,14 @@ Pushes to `main` (under `spa/**`) or manual `workflow_dispatch` trigger the pipe
 2. Sync `build/client/` to the S3 static site bucket
 3. Invalidate the CloudFront cache (`/*`)
 
-The frontend deploy does **not** trigger the infra repo — it only needs S3 sync and cache invalidation.
+The frontend deploy does **not** trigger the infra repo — it only needs S3 sync and cache invalidation. It **does** dispatch a `run_e2e` event to `jyatesdotdev-integration` after a successful deploy (continue-on-error).
+
+To force a redeploy with no code changes, commit a trivial change to `spa/.deploy-trigger` (the workflow only fires on pushes touching `spa/**`).
 
 ### Manual Trigger
 
 ```bash
-gh workflow run deploy.yml --repo jyatesdotdev/jyatesdotdev-frontend --ref main
+gh workflow run deploy.yml --repo <owner>/jyatesdotdev-frontend --ref main
 ```
 
 ### Required Secrets & Variables
@@ -58,7 +64,6 @@ gh workflow run deploy.yml --repo jyatesdotdev/jyatesdotdev-frontend --ref main
 | Secret | `AWS_ROLE_ARN` | GitHub OIDC deploy role ARN |
 | Secret | `FRONTEND_BUCKET` | S3 bucket name for static site |
 | Variable | `CLOUDFRONT_DISTRIBUTION_ID` | CloudFront distribution ID |
-| Variable | `VITE_RECAPTCHA_SITE_KEY` | Google reCAPTCHA v3 site key |
 | Variable | `VITE_RUM_APPLICATION_ID` | CloudWatch RUM app monitor ID |
 | Variable | `VITE_RUM_IDENTITY_POOL_ID` | Cognito Identity Pool ID for RUM |
 | Variable | `AWS_REGION` | `us-west-2` |
@@ -69,5 +74,4 @@ gh workflow run deploy.yml --repo jyatesdotdev/jyatesdotdev-frontend --ref main
 |---|---|---|
 | `VITE_RUM_APPLICATION_ID` | Prod | RUM application ID |
 | `VITE_RUM_IDENTITY_POOL_ID` | Prod | Cognito Identity Pool — enables real RUM SDK |
-| `VITE_RECAPTCHA_SITE_KEY` | Prod | reCAPTCHA v3 site key |
 | `VITE_PROXY_TARGET` | Dev | API Gateway URL for local proxying |

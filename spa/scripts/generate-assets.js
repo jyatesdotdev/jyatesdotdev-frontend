@@ -20,8 +20,10 @@ function getBlogPosts() {
         title: data.title,
         publishedAt: data.publishedAt,
         summary: data.summary,
+        draft: data.draft === true,
       };
     })
+    .filter((post) => !post.draft)
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
 }
 

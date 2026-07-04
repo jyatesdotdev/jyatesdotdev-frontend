@@ -28,3 +28,4 @@ spa/build/
 spa/test-results/
 spa/playwright-report/
 spa/.react-router/
+spa/public/diagrams/

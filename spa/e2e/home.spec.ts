@@ -4,7 +4,7 @@ test.describe('Home Page', () => {
   test('should have correct title and metadata', async ({ page }) => {
     await page.goto('/');
     
-    // Validate title (hydrated by React Helmet)
+    // Validate title (React 19 hoists document metadata into <head>)
     await expect(page).toHaveTitle(/Jonathan Yates/);
     
     // Validate key content

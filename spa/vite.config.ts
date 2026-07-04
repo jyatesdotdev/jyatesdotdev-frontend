@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config'
+import type { Plugin, ViteDevServer } from 'vite'
 import { reactRouter } from "@react-router/dev/vite"
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -7,11 +8,11 @@ import remarkGfm from 'remark-gfm'
 import remarkFrontmatter from 'remark-frontmatter'
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
 
-function mockRumTelemetryPlugin() {
+function mockRumTelemetryPlugin(): Plugin {
   return {
     name: 'mock-rum-telemetry',
-    configureServer(server: any) {
-      server.middlewares.use('/rum-telemetry', (req: any, res: any, next: any) => {
+    configureServer(server: ViteDevServer) {
+      server.middlewares.use('/rum-telemetry', (req, res, next) => {
         if (req.method === 'POST' || req.method === 'OPTIONS') {
           res.setHeader('Access-Control-Allow-Origin', '*');
           res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -23,7 +24,7 @@ function mockRumTelemetryPlugin() {
           }
 
           let body = '';
-          req.on('data', (chunk: any) => body += chunk.toString());
+          req.on('data', (chunk: Buffer) => body += chunk.toString());
           req.on('end', () => {
             console.log('\n📊 [AWS RUM] Telemetry metrics captured locally:');
             try {
@@ -33,7 +34,7 @@ function mockRumTelemetryPlugin() {
                 // Uncomment to see full payload:
                 // console.log(JSON.stringify(data, null, 2));
               }
-            } catch (e) {
+            } catch {
               console.log('Raw Payload:', body);
             }
             res.statusCode = 200;

@@ -23,7 +23,7 @@ export function Likes({ slug }: { slug: string }) {
       mutate(updatedLikes, false);
       
       // Track custom interaction event
-      const rum = (window as any).awsRum;
+      const rum = window.awsRum;
       if (rum) {
         rum.recordEvent('like_toggled', {
           slug,
@@ -34,7 +34,7 @@ export function Likes({ slug }: { slug: string }) {
     } catch (error) {
       // Revert optimistic update on error
       if (prevLikes) mutate(prevLikes, false);
-      (window as any).awsRum?.recordError(error as Error);
+      window.awsRum?.recordError(error);
     }
   };
 

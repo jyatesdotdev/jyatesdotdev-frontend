@@ -1,16 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { HelmetProvider } from 'react-helmet-async';
 import { Home } from './home';
 
 describe('Home', () => {
   it('renders correctly with personal details and SEO metadata', async () => {
     render(
-      <HelmetProvider>
-        <BrowserRouter>
-          <Home />
-        </BrowserRouter>
-      </HelmetProvider>
+      <BrowserRouter>
+        <Home />
+      </BrowserRouter>
     );
     
     expect(screen.getByText(/Jonathan Yates/i)).toBeInTheDocument();

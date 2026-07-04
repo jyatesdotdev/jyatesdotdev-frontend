@@ -43,7 +43,7 @@ export function Contact() {
       console.error('Error sending contact form:', error);
       setStatus('error');
       setErrorMessage('Failed to send message. Please try again later.');
-      (window as any).awsRum?.recordError(error as Error);
+      window.awsRum?.recordError(error);
     }
   };
 

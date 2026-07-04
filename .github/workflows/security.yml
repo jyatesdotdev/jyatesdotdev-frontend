@@ -53,3 +53,19 @@ jobs:
         run: npm ci --prefix spa
       - name: Run tests
         run: npm test --prefix spa
+
+  lint:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm ci --prefix spa
+      - name: ESLint
+        run: npm run lint --prefix spa
+      - name: Typecheck
+        run: npm run typecheck --prefix spa

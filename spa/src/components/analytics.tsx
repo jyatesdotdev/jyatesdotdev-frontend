@@ -4,7 +4,16 @@ import { useLocation } from 'react-router';
 interface RumLike {
   recordPageView(path: string): void;
   recordEvent(type: string, data: Record<string, unknown>): void;
-  recordError(error: Error): void;
+  recordError(error: unknown): void;
+}
+
+declare global {
+  interface Window {
+    /** RUM client for app code to record custom events/errors (AwsRum in prod, LocalRum in dev). */
+    awsRum?: RumLike;
+    /** Init guard + page-view recorder; same instance as awsRum. */
+    awsRumInstance?: RumLike;
+  }
 }
 
 class LocalRum implements RumLike {
@@ -29,8 +38,9 @@ class LocalRum implements RumLike {
     this.push({ type: `custom:${type}`, data, pageId: this.currentPage });
   }
 
-  recordError(error: Error) {
-    this.push({ type: 'error', data: { message: error.message, stack: error.stack }, pageId: this.currentPage });
+  recordError(error: unknown) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    this.push({ type: 'error', data: { message: err.message, stack: err.stack }, pageId: this.currentPage });
   }
 
   private push(event: { type: string; data?: unknown; pageId?: string }) {
@@ -66,18 +76,19 @@ export function Analytics() {
   const location = useLocation();
 
   useEffect(() => {
-    const env = (import.meta as any).env || {};
+    const env = import.meta.env || {};
     const appId = env.VITE_RUM_APPLICATION_ID;
     const identityPoolId = env.VITE_RUM_IDENTITY_POOL_ID;
     const localEndpoint = env.VITE_RUM_ENDPOINT;
 
     if (!appId || typeof window === 'undefined') return;
-    if ((window as any).awsRumInstance) return;
+    if (window.awsRumInstance) return;
 
     if (identityPoolId) {
-      // Production: use real AWS RUM SDK
+      // Production: use real AWS RUM SDK (guard against CJS/ESM default-export interop)
       import('aws-rum-web').then((pkg) => {
-        const { AwsRum } = pkg.default || pkg;
+        const AwsRum =
+          (pkg as typeof pkg & { default?: typeof pkg }).default?.AwsRum ?? pkg.AwsRum;
         const rum = new AwsRum(appId, '1.0.0', 'us-west-2', {
           sessionSampleRate: 1,
           identityPoolId,
@@ -85,20 +96,20 @@ export function Analytics() {
           telemetries: ['performance', 'errors', 'http'],
           allowCookies: true,
           enableXRay: false,
-        } as any);
-        (window as any).awsRum = rum;
-        (window as any).awsRumInstance = rum;
+        });
+        window.awsRum = rum;
+        window.awsRumInstance = rum;
       }).catch(() => {});
     } else if (localEndpoint) {
       // Local dev: lightweight mock that posts to a local endpoint
       const rum = new LocalRum(appId, localEndpoint);
-      (window as any).awsRum = rum;
-      (window as any).awsRumInstance = rum;
+      window.awsRum = rum;
+      window.awsRumInstance = rum;
     }
   }, []);
 
   useEffect(() => {
-    (window as any).awsRumInstance?.recordPageView(location.pathname);
+    window.awsRumInstance?.recordPageView(location.pathname);
   }, [location.pathname]);
 
   return null;
