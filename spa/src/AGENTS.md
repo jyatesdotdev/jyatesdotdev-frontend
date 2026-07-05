@@ -18,6 +18,11 @@ This is the React Router `appDirectory` (configured in `../react-router.config.t
 - `api/` — typed fetch helpers for the backend (`/api/v1/...`).
 - `data/` — static site data (career, projects, library, etc.).
 - `assets/` — static imports.
+- `lib/` — plain-JS shared utilities importable by both Node scripts and the browser
+  bundle. Currently `hash.js` (FNV-1a, hex; typed by `hash.d.ts`), used to derive
+  prebuilt PlantUML diagram filenames (`/diagrams/<hash>.svg`) from the same hash in
+  both `../scripts/generate-diagrams.js` and `components/plantuml.tsx` — keep it plain
+  JS so Node can import it directly.
 
 ## Checklist: adding a new static page
 

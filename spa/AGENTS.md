@@ -2,7 +2,7 @@
 
 React 19.2 + React Router 8 in **framework mode with `ssr: false`** (pure SPA, prerendered
 to static HTML). Vite 8, TypeScript 6, Tailwind CSS v4, MDX blog posts, Vitest 4 for unit
-tests, Playwright for visual e2e. ESM only (`"type": "module"`).
+tests, Playwright for e2e (functional specs + visual-regression snapshots). ESM only (`"type": "module"`).
 
 ## Commands (run from this directory)
 
@@ -13,7 +13,7 @@ tests, Playwright for visual e2e. ESM only (`"type": "module"`).
 | Unit tests | `npm test` (Vitest) |
 | Lint | `npm run lint` |
 | Typecheck | `npm run typecheck` (runs `react-router typegen` first — needed for route types) |
-| Visual e2e | `npm run e2e` (Playwright, port 4173) |
+| E2e | `npm run e2e` (Playwright, port 4173 — functional + visual specs) |
 | New blog post | `npm run new-post` (interactive scaffolder) |
 
 Before finishing any change: `npm run lint && npm run typecheck && npm test`
@@ -43,9 +43,12 @@ Before finishing any change: `npm run lint && npm run typecheck && npm test`
 
 - Unit tests are co-located (`foo.tsx` + `foo.test.tsx`), Testing Library, components
   wrapped in `MemoryRouter`.
+- `e2e/` holds both functional specs (`home.spec.ts`, `tools.spec.ts` — assertion-based,
+  platform-independent) and the visual-regression suite (`visual.spec.ts`).
 - `e2e/visual.spec.ts-snapshots/` baselines are **`-chromium-darwin` (macOS-only)**.
   Running Playwright on Linux regenerates different snapshot names/pixels and fails —
-  these are local-macOS baselines; CI does not run this suite.
+  these are local-macOS baselines; CI does not run this suite. The functional specs
+  aren't snapshot-bound, so they're safe to run anywhere.
 - `.deploy-trigger` is an empty file used to force CI redeploys — don't delete it.
 
 See `src/AGENTS.md` for source-tree conventions.
