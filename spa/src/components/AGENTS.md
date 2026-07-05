@@ -36,6 +36,11 @@
   `jyatesdotdev-integration` specs.**
 - `contact.tsx` — submits via its own fetch with a hidden honeypot `website` input;
   there is no reCAPTCHA anywhere in the app.
+- `admin.tsx` — comment-moderation dashboard (the `/admin` route): SWR against
+  `api.admin.*` with a pending/approved/rejected filter, optimistic
+  approve/reject/delete with revert-on-error (`mutate`), errors reported to
+  `window.awsRum`. Auth is not handled here — CloudFront basic-auth gates the
+  `/admin*` path and API Gateway's TOKEN authorizer gates the API (infra repo).
 
 ## tools/ — nav "tools" dropdown and floating tool windows
 

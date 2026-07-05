@@ -38,6 +38,10 @@ Before finishing any change: `npm run lint && npm run typecheck && npm test`
 - Env vars: `VITE_RUM_APPLICATION_ID` / `VITE_RUM_IDENTITY_POOL_ID` (presence enables the
   real `aws-rum-web` SDK), `VITE_RUM_ENDPOINT` / `VITE_RUM_REGION` (local mock),
   `VITE_PROXY_TARGET`. `.env.development` holds local values; prod values come from CI.
+- `public/` is copied verbatim into `build/client/`: favicons, the `icons.svg` sprite,
+  `images/` (profile photos, blog images, OG cards under `images/og/`), `logos/`.
+  Everything is referenced by absolute path (`/images/...`) and served with a 1-day
+  `Cache-Control` by the deploy workflow (updates rely on the `/*` invalidation).
 
 ## Testing gotchas
 
