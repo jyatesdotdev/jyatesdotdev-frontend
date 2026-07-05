@@ -157,14 +157,24 @@ const HELP: string[] = [
 ];
 
 function neofetch(theme: string): string[] {
-  return [
-    '     _       __        guest@jyates.dev',
-    '    (_)_  __/ /___  __ ----------------',
-    '   / / / / / / __ `/  Host:   jyates.dev',
-    '  / / /_/ / / /_/ /   Stack:  React 19 + Go on AWS Lambda',
-    ' /_/\\__, /_/\\__, /    Shell:  jsh 1.0.0',
-    '   /____/  /____/     Theme:  ' + theme,
+  // "JY" in the figlet "standard" block-caps font, zipped with the info column.
+  const logo = [
+    '     ___   __',
+    '    | \\ \\ / /',
+    ' _  | |\\ V /',
+    '| |_| | | |',
+    ' \\___/  |_|',
   ];
+  const info = [
+    'guest@jyates.dev',
+    '----------------',
+    'Host:   jyates.dev',
+    'Stack:  React 19 + Go on AWS Lambda',
+    'Shell:  jsh 1.0.0',
+    'Theme:  ' + theme,
+  ];
+  const width = Math.max(...logo.map((l) => l.length));
+  return info.map((line, i) => `${(logo[i] ?? '').padEnd(width)}   ${line}`);
 }
 
 /**

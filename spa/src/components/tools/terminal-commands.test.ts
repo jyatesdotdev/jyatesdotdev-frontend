@@ -277,6 +277,15 @@ describe('runCommand', () => {
     expect(output).toContain('light');
   });
 
+  it('neofetch renders the JY block-caps logo (not the old slant art)', () => {
+    const output = runCommand('neofetch', makeContext()).join('\n');
+    // Distinctive rows of the figlet "standard" JY logo
+    expect(output).toContain('| |_| | | |');
+    expect(output).toContain(' \\___/  |_|');
+    // The old slanted lowercase "jy" had a (_) j-dot — make sure it's gone
+    expect(output).not.toContain('(_)');
+  });
+
   it('whereami prints a status line and schedules an async lookup', () => {
     const ctx = makeContext();
     expect(runCommand('whereami', ctx)).toEqual(['locating…']);
