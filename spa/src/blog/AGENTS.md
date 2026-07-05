@@ -6,7 +6,7 @@
 - `posts/*.mdx` — one file per post. New posts are auto-discovered: auto-registered,
   auto-prerendered (`react-router.config.ts` reads this directory), and auto-added to
   sitemap/RSS by the postbuild script. No manual registration anywhere.
-- `post.tsx` — post page: renders MDX through the `MDXComponents` map, injects JSON-LD
+- `../components/post.tsx` — post page: renders MDX through the `MDXComponents` map, injects JSON-LD
   `BlogPosting`, and mounts `<Likes>` / `<Comments>`.
 
 ## Adding a post
