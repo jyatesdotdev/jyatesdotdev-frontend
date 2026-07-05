@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { runCommand, formatGeo, type TerminalContext } from './terminal-commands';
+import { runCommand, formatGeo, tokenize, complete, type TerminalContext } from './terminal-commands';
 
 function makeContext(overrides: Partial<TerminalContext> = {}): TerminalContext {
   return {
@@ -326,5 +326,88 @@ describe('formatGeo', () => {
   it('enriches the country name from the code when the API omits it', () => {
     // CloudFront often sends only the country code for datacenter IPs
     expect(formatGeo({ country: 'GB' })[0]).toContain('United Kingdom');
+  });
+});
+
+describe('tokenize', () => {
+  it('splits on whitespace', () => {
+    expect(tokenize('echo hello world')).toEqual(['echo', 'hello', 'world']);
+  });
+
+  it('groups double-quoted segments and strips the quotes', () => {
+    expect(tokenize('echo "hello world" > f')).toEqual(['echo', 'hello world', '>', 'f']);
+  });
+
+  it('groups single-quoted segments and strips the quotes', () => {
+    expect(tokenize("echo 'a b c'")).toEqual(['echo', 'a b c']);
+  });
+
+  it('keeps a quoted redirect char as text', () => {
+    expect(tokenize('echo ">" > f')).toEqual(['echo', '>', '>', 'f']);
+  });
+
+  it('preserves an empty quoted token', () => {
+    expect(tokenize('echo "" > f')).toEqual(['echo', '', '>', 'f']);
+  });
+});
+
+describe('echo redirection with quotes', () => {
+  it('writes the unquoted text, not the quote characters', () => {
+    const ctx = makeContext();
+    runCommand('echo "hello world" > notes.txt', ctx);
+    expect(ctx.writeFile).toHaveBeenCalledWith('notes.txt', 'hello world');
+  });
+
+  it('strips single quotes too', () => {
+    const ctx = makeContext();
+    runCommand("echo 'quoted' > notes.txt", ctx);
+    expect(ctx.writeFile).toHaveBeenCalledWith('notes.txt', 'quoted');
+  });
+
+  it('still prints unquoted echo unchanged', () => {
+    expect(runCommand('echo hello world', makeContext())).toEqual(['hello world']);
+  });
+});
+
+describe('complete (tab completion)', () => {
+  it('completes a unique command and adds a trailing space', () => {
+    expect(complete('ca', {}).line).toBe('cat ');
+  });
+
+  it('extends to the common prefix and lists ambiguous commands', () => {
+    const { line, suggestions } = complete('c', {});
+    expect(line).toBe('c');
+    expect(suggestions).toEqual(expect.arrayContaining(['cat', 'cd', 'clear']));
+  });
+
+  it('lists all commands on an empty line', () => {
+    const { suggestions } = complete('', {});
+    expect(suggestions).toContain('help');
+    expect(suggestions).toContain('whereami');
+  });
+
+  it('completes theme values', () => {
+    expect(complete('theme da', {}).line).toBe('theme dark ');
+  });
+
+  it('completes built-in file names for cat', () => {
+    expect(complete('cat ab', {}).line).toBe('cat about.txt ');
+  });
+
+  it('completes user-created files', () => {
+    expect(complete('cat no', { 'notes.txt': 'hi' }).line).toBe('cat notes.txt ');
+  });
+
+  it('completes blog post slugs under blog/', () => {
+    const { line } = complete('open blog/', {});
+    expect(line.startsWith('open blog/')).toBe(true);
+  });
+
+  it('completes page names for open', () => {
+    expect(complete('open ca', {}).line).toBe('open career ');
+  });
+
+  it('returns the input unchanged when nothing matches', () => {
+    expect(complete('zzz', {})).toEqual({ line: 'zzz', suggestions: [] });
   });
 });

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTheme } from '../theme-provider';
-import { runCommand } from './terminal-commands';
+import { runCommand, complete } from './terminal-commands';
 import { loadUserFiles, saveUserFiles } from './user-files';
 import { api, fetcher, type GeoData } from '../../api';
 
@@ -15,7 +15,7 @@ interface Line {
 
 const WELCOME: string[] = [
   'jsh 1.0.0 — welcome to jyates.dev',
-  "type 'help' to get started",
+  "type 'help' to get started · Tab completes",
   '',
 ];
 
@@ -96,6 +96,14 @@ export function Terminal({ onClose }: { onClose: () => void }) {
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const { line, suggestions } = complete(input, userFiles);
+      setInput(line);
+      // Bash-style: list options above the prompt when the match is ambiguous
+      if (suggestions.length > 1) append('out', [suggestions.join('   ')]);
+      return;
+    }
     if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (history.length === 0) return;

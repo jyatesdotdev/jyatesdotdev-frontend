@@ -60,7 +60,12 @@
   is a pure function (`runCommand(input, ctx)`) with side effects injected via
   `TerminalContext`, so commands are unit-tested without rendering
   (`terminal-commands.test.ts`). New commands go in the `switch` there; also update
-  the `HELP` text. jsdom quirk: use `scrollTop =` assignments, not `scrollTo()`.
+  the `HELP` text — and, if adding a top-level command, the `COMMANDS` array so
+  Tab-completion offers it. Input is split by `tokenize()` (quote-aware: `echo
+  "a b"` yields one token with quotes stripped), not naive whitespace, so `>`
+  inside quotes isn't a redirect. `complete()` powers Tab-completion (pure; the
+  Terminal calls it on the Tab key) — extend `argCandidates()` for new
+  file/page/value completions. jsdom quirk: use `scrollTop =`, not `scrollTo()`.
   **Async commands** (e.g. `whereami`) stay pure: the command calls
   `ctx.runAsync(task)` and returns an immediate status line; `task` uses injected
   async deps (`ctx.fetchGeo`) and returns lines that the terminal appends when they

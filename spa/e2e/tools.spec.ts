@@ -85,4 +85,32 @@ test.describe('Tools', () => {
     await expect(dialog.getByRole('img', { name: /world map/i })).toBeVisible();
     await expect(dialog).toContainText('United States');
   });
+
+  test('tab-completes a command', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'tools' }).click();
+    await page.getByRole('menuitem', { name: 'terminal' }).click();
+
+    const input = page.getByLabel('Terminal input');
+    await input.fill('who');
+    await input.press('Tab');
+    await expect(input).toHaveValue('whoami ');
+  });
+
+  test('echo redirection stores unquoted text', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'tools' }).click();
+    await page.getByRole('menuitem', { name: 'terminal' }).click();
+
+    const input = page.getByLabel('Terminal input');
+    await input.fill('echo "hi there" > note.txt');
+    await input.press('Enter');
+    await input.fill('cat note.txt');
+    await input.press('Enter');
+
+    // The command echo shows the quotes as typed, but the stored file content
+    // must be unquoted — assert on the cat output line, which is exactly "hi there".
+    const dialog = page.getByRole('dialog', { name: /jsh/ });
+    await expect(dialog.getByText('hi there', { exact: true })).toBeVisible();
+  });
 });

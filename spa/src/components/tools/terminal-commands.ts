@@ -85,6 +85,13 @@ function checkWrite(name: string, content: string, ctx: TerminalContext): string
 
 const PAGES = ['home', 'blog', 'career', 'projects', 'library', 'contact'];
 
+// Commands offered by tab-completion of the first token (kept in display order).
+const COMMANDS = [
+  'help', 'ls', 'cat', 'open', 'cd', 'theme', 'echo', 'touch', 'mkdir',
+  'rm', 'rmdir', 'whoami', 'whereami', 'date', 'pwd', 'history', 'neofetch',
+  'clear', 'exit',
+];
+
 const FILES: Record<string, () => string[]> = {
   'about.txt': () => [
     'Jonathan Yates',
@@ -161,6 +168,101 @@ function neofetch(theme: string): string[] {
 }
 
 /**
+ * Splits a command line into tokens, honoring single/double quotes so that
+ * `echo "hello world" > f` writes `hello world` (not `"hello world"`), and a
+ * quoted `>` counts as text rather than a redirect. Quote characters are
+ * consumed, mirroring a real shell.
+ */
+export function tokenize(input: string): string[] {
+  const tokens: string[] = [];
+  let current = '';
+  let quote: '"' | "'" | null = null;
+  let started = false; // lets an empty quoted token ("") survive as ''
+  for (const ch of input) {
+    if (quote) {
+      if (ch === quote) quote = null;
+      else current += ch;
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+      started = true;
+    } else if (/\s/.test(ch)) {
+      if (started) tokens.push(current);
+      current = '';
+      started = false;
+    } else {
+      current += ch;
+      started = true;
+    }
+  }
+  if (started) tokens.push(current);
+  return tokens;
+}
+
+export interface CompleteResult {
+  /** The input line after completion (extended to the longest common prefix). */
+  line: string;
+  /** Candidates to display when the completion is ambiguous (empty otherwise). */
+  suggestions: string[];
+}
+
+function longestCommonPrefix(strings: string[]): string {
+  let prefix = strings[0] ?? '';
+  for (const s of strings) {
+    while (!s.startsWith(prefix)) prefix = prefix.slice(0, -1);
+  }
+  return prefix;
+}
+
+/** Built-in files + the blog dir + user files/dirs (dir keys already end in "/"). */
+function fileNames(files: Record<string, string>): string[] {
+  return [...Object.keys(FILES), 'blog/', ...Object.keys(files)];
+}
+
+/** Candidate completions for an argument, by command and current fragment. */
+function argCandidates(cmd: string, partial: string, files: Record<string, string>): string[] {
+  switch (cmd) {
+    case 'cat':
+    case 'ls':
+    case 'rm':
+    case 'rmdir':
+    case 'touch':
+    case 'mkdir':
+      if (partial.startsWith('blog/')) return getPosts().map((p) => `blog/${p.slug}`);
+      return fileNames(files);
+    case 'open':
+    case 'cd':
+      if (partial.startsWith('blog/')) return getPosts().map((p) => `blog/${p.slug}`);
+      return [...PAGES, 'blog/'];
+    case 'theme':
+      return ['dark', 'light', 'system'];
+    default:
+      return [];
+  }
+}
+
+/**
+ * Tab-completion. Completes the last whitespace-delimited fragment against
+ * command names (first token) or command-specific arguments (files, pages,
+ * themes). Returns the updated line and, when ambiguous, the candidates to show.
+ * Pure, so it is unit-tested without rendering.
+ */
+export function complete(rawInput: string, files: Record<string, string>): CompleteResult {
+  const input = rawInput.replace(/^\s+/, '');
+  const parts = input.split(/\s+/);
+  const partial = parts[parts.length - 1];
+  const candidates = (
+    parts.length === 1 ? COMMANDS : argCandidates(parts[0], partial, files)
+  ).filter((c) => c.startsWith(partial));
+
+  if (candidates.length === 0) return { line: rawInput, suggestions: [] };
+
+  const head = parts.slice(0, -1).join(' ');
+  const completion = candidates.length === 1 ? `${candidates[0]} ` : longestCommonPrefix(candidates);
+  const line = head ? `${head} ${completion}` : completion;
+  return { line, suggestions: candidates.length > 1 ? candidates : [] };
+}
+
+/**
  * Executes one line of input and returns the lines to print.
  * Side effects (navigation, theme, close, clear) go through ctx.
  */
@@ -168,7 +270,7 @@ export function runCommand(rawInput: string, ctx: TerminalContext): string[] {
   const input = rawInput.trim();
   if (!input) return [];
 
-  const [cmd, ...args] = input.split(/\s+/);
+  const [cmd, ...args] = tokenize(input);
   const arg = args.join(' ');
 
   switch (cmd) {
