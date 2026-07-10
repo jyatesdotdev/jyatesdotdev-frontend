@@ -68,20 +68,24 @@
 - `terminal.tsx` + `terminal-commands.ts` — the CLI emulator (`jsh`). Command logic
   is a pure function (`runCommand(input, ctx)`) with side effects injected via
   `TerminalContext`, so commands are unit-tested without rendering
-  (`terminal-commands.test.ts`). New commands go in the `switch` there; also update
-  the `HELP` text — and, if adding a top-level command, the `COMMANDS` array so
-  Tab-completion offers it. Input is split by `tokenize()` (quote-aware: `echo
-  "a b"` yields one token with quotes stripped), not naive whitespace, so `>`
-  inside quotes isn't a redirect. `complete()` powers Tab-completion (pure; the
-  Terminal calls it on the Tab key) — extend `argCandidates()` for new
-  file/page/value completions. jsdom quirk: use `scrollTop =`, not `scrollTo()`.
+  (`terminal-commands.test.ts`). New commands go in the `switch` and the
+  `COMMAND_DOCS` registry; `help`, `man`, and top-level completion derive from that
+  registry. Input uses quote-aware token and pipeline parsers, so operators inside
+  quotes stay literal. `complete()` is cwd- and pipeline-aware; extend
+  `argCandidates()` for new file/page/value completions. Virtual paths are normalized
+  home-relative keys even though `pwd` and the prompt render `/home/guest`/`~`.
+  jsdom quirk: use `scrollTop =`, not `scrollTo()`.
   **Async commands** (e.g. `whereami`) stay pure: the command calls
   `ctx.runAsync(task)` and returns an immediate status line; `task` uses injected
-  async deps (`ctx.fetchGeo`) and returns lines that the terminal appends when they
-  resolve. Keep the formatting in a separate exported pure fn (`formatGeo`) so it's
-  unit-tested without a promise.
+  async deps (`ctx.fetchGeo`, `ctx.fetchStatus`) and returns lines that the terminal
+  appends when they resolve. Keep formatting in exported pure functions
+  (`formatGeo`, `formatStatus`) so it is unit-tested without a promise.
+- `terminal-lab.ts` — deterministic, browser-only SMART output and the stateful
+  on-call incident scenario. Its `incident/` evidence is mounted read-only by the
+  virtual filesystem in `terminal-commands.ts`.
 - `user-files.ts` — user-created terminal files and directories (`touch`, `mkdir`,
   `echo >`, `rm`, `rmdir`) persisted to localStorage key `jyates-jsh-files`. Flat
   store: directory keys end with `/` (S3-style); validation/quotas live in
   `checkWrite()`/`validatePath()`. Built-ins are read-only; writes go through
-  `ctx.writeFile`/`ctx.deleteFile`.
+  `ctx.writeFile`/`ctx.deleteFile`. Command history is separately bounded to 100
+  entries under `jyates-jsh-history`.

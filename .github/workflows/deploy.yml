@@ -135,6 +135,7 @@ jobs:
         working-directory: spa
         run: npm run build
         env:
+          VITE_BUILD_SHA: ${{ github.sha }}
           VITE_RUM_APPLICATION_ID: ${{ vars.VITE_RUM_APPLICATION_ID }}
           VITE_RUM_IDENTITY_POOL_ID: ${{ vars.VITE_RUM_IDENTITY_POOL_ID }}
 

@@ -1,5 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { runCommand, formatGeo, tokenize, complete, type TerminalContext } from './terminal-commands';
+import {
+  runCommand,
+  formatGeo,
+  formatStatus,
+  tokenize,
+  splitPipeline,
+  complete,
+  type TerminalContext,
+} from './terminal-commands';
 
 function makeContext(overrides: Partial<TerminalContext> = {}): TerminalContext {
   return {
@@ -8,11 +16,23 @@ function makeContext(overrides: Partial<TerminalContext> = {}): TerminalContext 
     theme: 'dark',
     close: vi.fn(),
     clearScreen: vi.fn(),
+    clearHistory: vi.fn(),
     history: [],
+    cwd: '',
+    changeDirectory: vi.fn(),
+    onCallSession: { status: 'idle', attempts: 0, hints: 0 },
+    updateOnCall: vi.fn(),
     files: {},
     writeFile: vi.fn(),
     deleteFile: vi.fn(),
     fetchGeo: vi.fn().mockResolvedValue({ country: '' }),
+    fetchStatus: vi.fn().mockResolvedValue({
+      checkedAt: '2026-07-10T12:00:00.000Z',
+      route: '/',
+      build: 'development',
+      api: 'operational',
+      latencyMs: 12,
+    }),
     runAsync: vi.fn(),
     ...overrides,
   };
@@ -29,6 +49,13 @@ describe('runCommand', () => {
     for (const cmd of ['ls', 'cat', 'open', 'theme', 'clear', 'exit']) {
       expect(output).toContain(cmd);
     }
+  });
+
+  it('renders manual pages from the command registry', () => {
+    const output = runCommand('man grep', makeContext()).join('\n');
+    expect(output).toContain('SYNOPSIS');
+    expect(output).toContain('grep [-i] <pattern> [file]');
+    expect(runCommand('man nope', makeContext())).toEqual(['No manual entry for nope']);
   });
 
   it('echoes text back', () => {
@@ -88,10 +115,25 @@ describe('runCommand', () => {
     expect(ctx.navigate).not.toHaveBeenCalled();
   });
 
-  it('cd behaves like open', () => {
-    const ctx = makeContext();
-    runCommand('cd projects', ctx);
-    expect(ctx.navigate).toHaveBeenCalledWith('/projects');
+  it('cd changes the virtual working directory without navigating', () => {
+    const ctx = makeContext({ files: { 'docs/': '' } });
+    expect(runCommand('cd docs', ctx)).toEqual([]);
+    expect(ctx.changeDirectory).toHaveBeenCalledWith('docs');
+    expect(ctx.navigate).not.toHaveBeenCalled();
+  });
+
+  it('cd supports parent and home paths', () => {
+    const ctx = makeContext({ cwd: 'docs/sub', files: { 'docs/': '', 'docs/sub/': '' } });
+    runCommand('cd ..', ctx);
+    expect(ctx.changeDirectory).toHaveBeenCalledWith('docs');
+    runCommand('cd ~', ctx);
+    expect(ctx.changeDirectory).toHaveBeenCalledWith('');
+  });
+
+  it('cd rejects files and missing directories', () => {
+    const ctx = makeContext({ files: { 'notes.txt': '' } });
+    expect(runCommand('cd notes.txt', ctx)[0]).toMatch(/Not a directory/);
+    expect(runCommand('cd nowhere', ctx)[0]).toMatch(/No such file or directory/);
   });
 
   it('theme sets a valid mode', () => {
@@ -123,6 +165,12 @@ describe('runCommand', () => {
     expect(runCommand('history', ctx)).toEqual(['  1  ls', '  2  help']);
   });
 
+  it('history -c clears persisted history', () => {
+    const ctx = makeContext({ history: ['ls'] });
+    expect(runCommand('history -c', ctx)).toEqual([]);
+    expect(ctx.clearHistory).toHaveBeenCalledOnce();
+  });
+
   it('touch creates a new empty file', () => {
     const ctx = makeContext();
     expect(runCommand('touch notes.txt', ctx)).toEqual([]);
@@ -139,7 +187,7 @@ describe('runCommand', () => {
 
   it('touch rejects invalid file names', () => {
     const ctx = makeContext();
-    expect(runCommand('touch ../evil', ctx)[0]).toMatch(/invalid name/);
+    expect(runCommand('touch ../evil', ctx)[0]).toMatch(/outside \/home\/guest/);
     expect(ctx.writeFile).not.toHaveBeenCalled();
   });
 
@@ -179,6 +227,7 @@ describe('runCommand', () => {
     const ctx = makeContext();
     expect(runCommand('rm about.txt', ctx)[0]).toMatch(/permission denied/);
     expect(runCommand('rm -rf /', ctx)[0]).toMatch(/permission denied/);
+    expect(runCommand('rm -rf ~/', ctx)[0]).toMatch(/permission denied/);
     expect(runCommand('rm nope.txt', ctx)[0]).toMatch(/No such file/);
     expect(ctx.deleteFile).not.toHaveBeenCalled();
   });
@@ -219,6 +268,43 @@ describe('runCommand', () => {
     const ctx2 = makeContext();
     expect(runCommand('touch nope/file.txt', ctx2)[0]).toMatch(/No such directory/);
     expect(ctx2.writeFile).not.toHaveBeenCalled();
+  });
+
+  it('resolves reads and writes relative to the working directory', () => {
+    const ctx = makeContext({
+      cwd: 'docs',
+      files: { 'docs/': '', 'docs/note.txt': 'hello', 'root.txt': 'root' },
+    });
+    expect(runCommand('pwd', ctx)).toEqual(['/home/guest/docs']);
+    expect(runCommand('cat note.txt', ctx)).toEqual(['hello']);
+    expect(runCommand('cat ~/root.txt', ctx)).toEqual(['root']);
+    runCommand('echo next > second.txt', ctx);
+    expect(ctx.writeFile).toHaveBeenCalledWith('docs/second.txt', 'next');
+  });
+
+  it('lists the current and parent directories', () => {
+    const ctx = makeContext({
+      cwd: 'docs',
+      files: { 'docs/': '', 'docs/a.txt': '', 'root.txt': '' },
+    });
+    expect(runCommand('ls', ctx)).toEqual(['a.txt']);
+    expect(runCommand('ls ..', ctx)[0]).toContain('root.txt');
+  });
+
+  it('renders trees and finds matching descendants', () => {
+    const ctx = makeContext({
+      files: {
+        'docs/': '',
+        'docs/a.txt': '',
+        'docs/sub/': '',
+        'docs/sub/b.log': '',
+      },
+    });
+    const tree = runCommand('tree docs', ctx).join('\n');
+    expect(tree).toContain('a.txt');
+    expect(tree).toContain('sub/');
+    expect(tree).toContain('b.log');
+    expect(runCommand("find docs '*.txt'", ctx)).toEqual(['~/docs/a.txt']);
   });
 
   it('ls shows directories at the root and lists their contents', () => {
@@ -275,6 +361,78 @@ describe('runCommand', () => {
     const output = runCommand('neofetch', makeContext({ theme: 'light' })).join('\n');
     expect(output).toContain('jyates.dev');
     expect(output).toContain('light');
+  });
+
+  it('schedules a live status check', () => {
+    const runAsync = vi.fn();
+    const ctx = makeContext({ runAsync });
+    expect(runCommand('status', ctx)).toEqual(['checking live services...']);
+    expect(runAsync).toHaveBeenCalledOnce();
+  });
+
+  it('queries projects by technology and emits JSON', () => {
+    const readable = runCommand('projects --tech go', makeContext()).join('\n');
+    expect(readable).toContain('Personal Portfolio');
+    const parsed = JSON.parse(runCommand('projects --tech rust --json', makeContext()).join('\n'));
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].title).toBe('Comprehensive Project Templates');
+  });
+
+  it('queries posts by tag', () => {
+    expect(runCommand('blog --tag definitely-not-a-tag', makeContext())).toEqual([
+      'No posts matched.',
+    ]);
+    expect(JSON.parse(runCommand('blog --json', makeContext()).join('\n')).length).toBeGreaterThan(0);
+  });
+
+  it('queries work history by company', () => {
+    const output = runCommand('resume --company amazon', makeContext()).join('\n');
+    expect(output).toContain('Software Development Engineer II, Amazon');
+    expect(output).not.toContain('INVIDI');
+  });
+
+  it('filters the library by category', () => {
+    const books = JSON.parse(runCommand('library books --json', makeContext()).join('\n'));
+    expect(books.length).toBeGreaterThan(0);
+    expect(books.every((item: { category: string }) => item.category === 'books')).toBe(true);
+    expect(runCommand('library videos', makeContext())[0]).toMatch(/unknown category/);
+    expect(runCommand('library books websites', makeContext())[0]).toMatch(/unexpected argument/);
+  });
+
+  it('mounts read-only incident evidence in the virtual filesystem', () => {
+    const ctx = makeContext();
+    expect(runCommand('ls incident', ctx)[0]).toContain('app.log');
+    expect(runCommand('cat incident/deploys.log | grep RETRY', ctx)).toEqual([
+      '  RETRY_MAX_ATTEMPTS: 3 -> 12',
+      '  RETRY_JITTER_MS:   250 -> 0',
+    ]);
+    expect(runCommand('rm -r incident', ctx)[0]).toMatch(/permission denied/);
+  });
+
+  it('reports deterministic SMART data for the simulated My Book', () => {
+    expect(runCommand('smartctl --scan', makeContext())[0]).toContain('/dev/mybook');
+    const report = runCommand('smartctl -a /dev/mybook', makeContext()).join('\n');
+    expect(report).toContain('PASSED');
+    expect(report).toContain('Reallocated_Sector_Ct');
+    expect(report).toContain('open blog/wd-smart-reader');
+  });
+
+  it('starts and resolves the on-call lab from evidence', () => {
+    const start = makeContext();
+    expect(runCommand('oncall start', start)[0]).toContain('PAGE');
+    expect(start.updateOnCall).toHaveBeenCalledWith({ status: 'active', attempts: 0, hints: 0 });
+
+    const active = makeContext({ onCallSession: { status: 'active', attempts: 1, hints: 1 } });
+    const result = runCommand('oncall resolve retry-storm', active).join('\n');
+    expect(result).toContain('RESOLVED');
+    expect(result).toContain('75/100');
+    expect(active.updateOnCall).toHaveBeenCalledWith({ status: 'resolved', attempts: 1, hints: 1 });
+  });
+
+  it('rejects unsupported on-call diagnoses and tracks attempts', () => {
+    const ctx = makeContext({ onCallSession: { status: 'active', attempts: 0, hints: 0 } });
+    expect(runCommand('oncall resolve add-capacity', ctx)[0]).toMatch(/rejected/);
+    expect(ctx.updateOnCall).toHaveBeenCalledWith({ status: 'active', attempts: 1, hints: 0 });
   });
 
   it('neofetch renders the JY block-caps logo (not the old slant art)', () => {
@@ -338,6 +496,33 @@ describe('formatGeo', () => {
   });
 });
 
+describe('formatStatus', () => {
+  const status = {
+    checkedAt: '2026-07-10T12:00:00.000Z',
+    route: '/projects',
+    build: 'abc123',
+    api: 'operational' as const,
+    latencyMs: 18,
+    geo: { country: 'US', countryName: 'United States', city: 'Seattle' },
+    visits: { total: 42, countries: [{ country: 'US', countryName: 'United States', count: 42 }] },
+  };
+
+  it('formats a readable live summary', () => {
+    const output = formatStatus(status).join('\n');
+    expect(output).toContain('operational (18 ms)');
+    expect(output).toContain('Seattle, United States');
+    expect(output).toContain('42 visits from 1 country');
+    expect(output).toContain('/projects');
+  });
+
+  it('supports machine-readable JSON', () => {
+    expect(JSON.parse(formatStatus(status, true).join('\n'))).toMatchObject({
+      api: 'operational',
+      build: 'abc123',
+    });
+  });
+});
+
 describe('tokenize', () => {
   it('splits on whitespace', () => {
     expect(tokenize('echo hello world')).toEqual(['echo', 'hello', 'world']);
@@ -376,6 +561,47 @@ describe('echo redirection with quotes', () => {
   it('still prints unquoted echo unchanged', () => {
     expect(runCommand('echo hello world', makeContext())).toEqual(['hello world']);
   });
+
+  it('does not treat a quoted redirect operator as redirection', () => {
+    const ctx = makeContext();
+    expect(runCommand('echo ">"', ctx)).toEqual(['>']);
+    expect(ctx.writeFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('pipelines and filters', () => {
+  it('splits only on unquoted pipe characters', () => {
+    expect(splitPipeline('echo "a|b" | wc -c')).toEqual(['echo "a|b"', 'wc -c']);
+    expect(runCommand('echo "a|b"', makeContext())).toEqual(['a|b']);
+  });
+
+  it('filters built-in file content through a pipeline', () => {
+    const lines = runCommand('cat projects.txt | grep -i go | head -n 1', makeContext());
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/go/i);
+  });
+
+  it('supports direct file input and reverse sorting', () => {
+    const ctx = makeContext({ files: { 'letters.txt': 'b\na\nc' } });
+    expect(runCommand('sort -r letters.txt', ctx)).toEqual(['c', 'b', 'a']);
+  });
+
+  it('counts pipeline output', () => {
+    expect(runCommand('echo one two three | wc -w', makeContext())).toEqual(['3']);
+    expect(runCommand('history | tail -n 1', makeContext({ history: ['ls', 'help'] }))).toEqual([
+      '  2  help',
+    ]);
+  });
+
+  it('returns no lines for head or tail with a zero count', () => {
+    expect(runCommand('echo hello | head -n 0', makeContext())).toEqual([]);
+    expect(runCommand('echo hello | tail -n 0', makeContext())).toEqual([]);
+  });
+
+  it('reports malformed pipelines and patterns', () => {
+    expect(runCommand('echo hi |', makeContext())[0]).toMatch(/syntax error/);
+    expect(runCommand('echo hi | grep [', makeContext())[0]).toMatch(/invalid pattern/);
+  });
 });
 
 describe('complete (tab completion)', () => {
@@ -407,6 +633,12 @@ describe('complete (tab completion)', () => {
     expect(complete('cat no', { 'notes.txt': 'hi' }).line).toBe('cat notes.txt ');
   });
 
+  it('completes paths relative to the working directory', () => {
+    const files = { 'docs/': '', 'docs/note.txt': 'hi' };
+    expect(complete('cat no', files, 'docs').line).toBe('cat note.txt ');
+    expect(complete('cd do', files).line).toBe('cd docs/ ');
+  });
+
   it('completes blog post slugs under blog/', () => {
     const { line } = complete('open blog/', {});
     expect(line.startsWith('open blog/')).toBe(true);
@@ -418,5 +650,9 @@ describe('complete (tab completion)', () => {
 
   it('returns the input unchanged when nothing matches', () => {
     expect(complete('zzz', {})).toEqual({ line: 'zzz', suggestions: [] });
+  });
+
+  it('completes the active stage of a pipeline', () => {
+    expect(complete('cat about.txt | gre', {}).line).toBe('cat about.txt | grep ');
   });
 });

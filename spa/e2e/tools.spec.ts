@@ -113,4 +113,81 @@ test.describe('Tools', () => {
     const dialog = page.getByRole('dialog', { name: /jsh/ });
     await expect(dialog.getByText('hi there', { exact: true })).toBeVisible();
   });
+
+  test('terminal supports cwd, pipelines, and the on-call lab', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'tools' }).click();
+    await page.getByRole('menuitem', { name: 'terminal' }).click();
+
+    const dialog = page.getByRole('dialog', { name: /jsh/ });
+    const input = page.getByLabel('Terminal input');
+    for (const command of [
+      'mkdir docs',
+      'cd docs',
+      'echo hello world > note.txt',
+      'cat note.txt | grep hello | wc -w',
+    ]) {
+      await input.fill(command);
+      await input.press('Enter');
+    }
+    await expect(dialog).toContainText('guest@jyates.dev:~/docs$');
+    await expect(dialog.getByText('2', { exact: true })).toBeVisible();
+
+    await input.fill('oncall start');
+    await input.press('Enter');
+    await input.fill('cat ~/incident/deploys.log | grep RETRY_MAX');
+    await input.press('Enter');
+    await expect(dialog).toContainText('RETRY_MAX_ATTEMPTS: 3 -> 12');
+    await input.fill('oncall resolve retry-storm');
+    await input.press('Enter');
+    await expect(dialog).toContainText('INC-2026-0710 RESOLVED');
+    await expect(dialog).toContainText('Incident score: 100/100');
+  });
+
+  test('status reports live service data', async ({ page }) => {
+    await page.route('**/api/v1/geo', (route) =>
+      route.fulfill({
+        json: { country: 'US', countryName: 'United States', city: 'Seattle' },
+      })
+    );
+    await page.route('**/api/v1/visits', (route) =>
+      route.fulfill({
+        json: {
+          total: 42,
+          countries: [{ country: 'US', countryName: 'United States', count: 42 }],
+        },
+      })
+    );
+    await page.goto('/projects');
+    await page.getByRole('button', { name: 'tools' }).click();
+    await page.getByRole('menuitem', { name: 'terminal' }).click();
+
+    const dialog = page.getByRole('dialog', { name: /jsh/ });
+    const input = page.getByLabel('Terminal input');
+    await input.fill('status');
+    await input.press('Enter');
+    await expect(dialog).toContainText('api:      operational');
+    await expect(dialog).toContainText('Seattle, United States');
+    await expect(dialog).toContainText('42 visits from 1 country');
+    await expect(dialog).toContainText('route:    /projects');
+  });
+
+  test('terminal stays usable on a mobile viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'tools' }).click();
+    await page.getByRole('menuitem', { name: 'terminal' }).click();
+
+    const dialog = page.getByRole('dialog', { name: /jsh/ });
+    const input = page.getByLabel('Terminal input');
+    await expect(dialog).toBeVisible();
+    await expect(input).toBeVisible();
+    await input.fill('man grep');
+    await input.press('Enter');
+    await expect(dialog).toContainText('SYNOPSIS');
+    const box = await dialog.boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+    expect(await dialog.getByTestId('terminal').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  });
 });

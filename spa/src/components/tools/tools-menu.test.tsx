@@ -65,6 +65,47 @@ describe('ToolsMenu', () => {
     expect(input).toHaveValue('echo first');
   });
 
+  it('persists command history across terminal sessions', async () => {
+    renderToolsMenu();
+    const user = userEvent.setup();
+
+    await openTerminal(user);
+    await user.type(screen.getByLabelText('Terminal input'), 'echo persisted{Enter}');
+    await user.click(screen.getByRole('button', { name: /close window/i }));
+    await openTerminal(user);
+    const input = screen.getByLabelText('Terminal input');
+    await user.type(input, '{ArrowUp}');
+    expect(input).toHaveValue('echo persisted');
+  });
+
+  it('expands the previous command with !!', async () => {
+    renderToolsMenu();
+    const user = userEvent.setup();
+
+    await openTerminal(user);
+    const input = screen.getByLabelText('Terminal input');
+    await user.type(input, 'echo repeated{Enter}');
+    await user.type(input, '!!{Enter}');
+    expect(screen.getAllByText('repeated', { exact: true })).toHaveLength(2);
+  });
+
+  it('supports reverse search, cancel, and clear shortcuts', async () => {
+    renderToolsMenu();
+    const user = userEvent.setup();
+
+    await openTerminal(user);
+    const input = screen.getByLabelText('Terminal input');
+    await user.type(input, 'echo searchable{Enter}');
+    await user.type(input, 'search');
+    await user.keyboard('{Control>}r{/Control}');
+    expect(input).toHaveValue('echo searchable');
+    await user.keyboard('{Control>}c{/Control}');
+    expect(input).toHaveValue('');
+    expect(screen.getByTestId('terminal')).toHaveTextContent('^C');
+    await user.keyboard('{Control>}l{/Control}');
+    expect(screen.getByTestId('terminal')).not.toHaveTextContent('welcome to jyates.dev');
+  });
+
   it('closes the window via the close button', async () => {
     renderToolsMenu();
     const user = userEvent.setup();
@@ -108,6 +149,18 @@ describe('ToolsMenu', () => {
     expect(screen.getByTestId('terminal')).toHaveTextContent('note.txt');
     await user.type(input, 'cat docs/note.txt{Enter}');
     expect(screen.getByTestId('terminal')).toHaveTextContent('hello');
+  });
+
+  it('keeps on-call lab state across commands', async () => {
+    renderToolsMenu();
+    const user = userEvent.setup();
+
+    await openTerminal(user);
+    const input = screen.getByLabelText('Terminal input');
+    await user.type(input, 'oncall start{Enter}');
+    await user.type(input, 'oncall resolve retry-storm{Enter}');
+    expect(screen.getByTestId('terminal')).toHaveTextContent('INC-2026-0710 RESOLVED');
+    expect(screen.getByTestId('terminal')).toHaveTextContent('Incident score: 100/100');
   });
 
   it('keeps terminal history when the window is shaded and unshaded', async () => {
