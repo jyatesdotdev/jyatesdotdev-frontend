@@ -36,39 +36,79 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Dispatch and wait for exact-revision E2E
-        env:
-          GH_TOKEN: ${{ secrets.INFRA_REPO_PAT }}
-          REPOSITORY_OWNER: ${{ github.repository_owner }}
-          API_REF: ${{ needs.resolve-e2e-revisions.outputs.api_sha }}
-          FRONTEND_REF: ${{ github.sha }}
-          INTEGRATION_REF: ${{ needs.resolve-e2e-revisions.outputs.integration_sha }}
+      - name: Checkout integration
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository_owner }}/jyatesdotdev-integration
+          ref: ${{ needs.resolve-e2e-revisions.outputs.integration_sha }}
+          path: jyatesdotdev-integration
+          token: ${{ secrets.INFRA_REPO_PAT }}
+          persist-credentials: false
+
+      - name: Checkout API
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository_owner }}/jyatesdotdev-api
+          ref: ${{ needs.resolve-e2e-revisions.outputs.api_sha }}
+          path: jyatesdotdev-api
+
+      - name: Checkout frontend
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: jyatesdotdev-frontend
+
+      - name: Report tested revisions
         run: |
-          correlation_id="frontend-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          run_title="E2E gate ${correlation_id}"
-          integration_repo="${REPOSITORY_OWNER}/jyatesdotdev-integration"
+          git -C jyatesdotdev-integration rev-parse HEAD
+          git -C jyatesdotdev-api rev-parse HEAD
+          git -C jyatesdotdev-frontend rev-parse HEAD
 
-          jq -n \
-            --arg correlation_id "$correlation_id" \
-            --arg api_ref "$API_REF" \
-            --arg frontend_ref "$FRONTEND_REF" \
-            --arg integration_ref "$INTEGRATION_REF" \
-            '{event_type:"run_e2e",client_payload:{correlation_id:$correlation_id,api_ref:$api_ref,frontend_ref:$frontend_ref,integration_ref:$integration_ref}}' |
-            gh api --method POST "repos/${integration_repo}/dispatches" --input -
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: jyatesdotdev-api/backend/go.mod
+          cache-dependency-path: jyatesdotdev-api/backend/go.sum
 
-          deadline=$((SECONDS + 180))
-          run_id=""
-          while [[ -z "$run_id" && $SECONDS -lt $deadline ]]; do
-            run_id="$(gh api "repos/${integration_repo}/actions/runs?event=repository_dispatch&per_page=20" |
-              jq -r --arg title "$run_title" '[.workflow_runs[] | select(.display_title == $title) | .id] | first // empty')"
-            [[ -n "$run_id" ]] || sleep 3
-          done
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            jyatesdotdev-integration/package-lock.json
+            jyatesdotdev-frontend/spa/package-lock.json
 
-          if [[ -z "$run_id" ]]; then
-            echo "::error::Timed out waiting for the integration workflow to start"
-            exit 1
-          fi
-          gh run watch "$run_id" --repo "$integration_repo" --exit-status
+      - name: Install frontend dependencies
+        working-directory: jyatesdotdev-frontend/spa
+        run: npm ci
+
+      - name: Install integration dependencies
+        working-directory: jyatesdotdev-integration
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: jyatesdotdev-integration
+        run: npx playwright install --with-deps chromium
+
+      - name: Typecheck integration suite
+        working-directory: jyatesdotdev-integration
+        run: npm run typecheck
+
+      - name: Run E2E tests
+        working-directory: jyatesdotdev-integration
+        run: npm run e2e
+        env:
+          CI: true
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: jyatesdotdev-integration/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
 
   build-and-deploy:
     needs: e2e
