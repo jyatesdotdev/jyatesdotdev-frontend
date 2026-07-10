@@ -43,11 +43,14 @@ Full-stack E2E (frontend + Go API + LocalStack) lives in the sibling `jyatesdotd
 
 Pushes to `main` (under `spa/**`) or manual `workflow_dispatch` trigger the pipeline:
 
-1. Build the SPA with Vite (prerendering all routes)
-2. Sync `build/client/` to the S3 static site bucket
-3. Invalidate the CloudFront cache (`/*`)
+1. Run the cross-repo LocalStack E2E suite against the exact frontend revision
+2. Build the SPA with Vite (prerendering all routes)
+3. Sync `build/client/` to the S3 static site bucket and invalidate CloudFront (`/*`)
+4. Verify the deployed revision, then queue notifications for newly published posts or
+   newly added projects by writing a manifest under `notification-events/`
 
-The frontend deploy does **not** trigger the infra repo — it only needs S3 sync and cache invalidation. It **does** dispatch a `run_e2e` event to `jyatesdotdev-integration` after a successful deploy (continue-on-error).
+The frontend deploy does **not** trigger the infra repo. The manifest is uploaded only
+after deployment verification succeeds, and manual workflow runs never announce content.
 
 To force a redeploy with no code changes, commit a trivial change to `spa/.deploy-trigger` (the workflow only fires on pushes touching `spa/**`).
 

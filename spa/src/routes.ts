@@ -8,6 +8,7 @@ export default [
   route("projects", "routes/projects.tsx"),
   route("library", "routes/library.tsx"),
   route("contact", "routes/contact.tsx"),
+  route("subscribe/confirm", "routes/subscribe-confirm.tsx"),
   route("admin", "routes/admin.tsx"),
   route("*", "routes/not-found.tsx")
 ] satisfies RouteConfig;

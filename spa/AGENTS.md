@@ -15,6 +15,7 @@ tests, Playwright for e2e (functional specs + visual-regression snapshots). ESM 
 | Typecheck | `npm run typecheck` (runs `react-router typegen` first — needed for route types) |
 | E2e | `npm run e2e` (Playwright, port 4173 — functional + visual specs) |
 | New blog post | `npm run new-post` (interactive scaffolder) |
+| Detect publish events | `node scripts/collect-notifications.js <before-sha> <current-sha> <site-url>` |
 
 Before finishing any change: `npm run lint && npm run typecheck && npm test`
 (CI enforces all three on push/PR to `main`).
@@ -54,5 +55,10 @@ Before finishing any change: `npm run lint && npm run typecheck && npm test`
   these are local-macOS baselines; CI does not run this suite. The functional specs
   aren't snapshot-bound, so they're safe to run anywhere.
 - `.deploy-trigger` is an empty file used to force CI redeploys — don't delete it.
+- `scripts/collect-notifications.js` uses `gray-matter` for MDX frontmatter and the
+  TypeScript AST for project data. It announces added public posts, draft-to-public
+  posts, and newly added projects only. Project `id` values are stable publish
+  identities and must not change on a rename; keep the manifest contract aligned with
+  the API repo's `internal/notifications` validator.
 
 See `src/AGENTS.md` for source-tree conventions.

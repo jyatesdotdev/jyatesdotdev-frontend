@@ -1,5 +1,6 @@
 import { projects } from '../data/projects';
 import { SEO } from './seo';
+import { SubscriptionForm } from './subscription-form';
 
 export function Projects() {
   return (
@@ -15,9 +16,9 @@ export function Projects() {
       </p>
       
       <div className="grid grid-cols-1 gap-8">
-        {projects.map((project, index) => (
+        {projects.map((project) => (
           <div
-            key={index}
+            key={project.id}
             className="group flex flex-col p-6 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#111010]"
           >
             <h2 className="text-2xl font-bold tracking-tight mb-4">
@@ -50,6 +51,7 @@ export function Projects() {
           </div>
         ))}
       </div>
+      <SubscriptionForm defaultTopics={['projects']} />
     </section>
   );
 }

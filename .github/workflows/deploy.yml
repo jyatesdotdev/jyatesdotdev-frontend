@@ -119,6 +119,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -154,7 +156,7 @@ jobs:
           # Other static files (images, favicons, feeds): cache for a day;
           # the CloudFront invalidation below handles updates at the edge
           aws s3 sync build/client/ s3://${{ secrets.FRONTEND_BUCKET }}/ --delete \
-            --exclude "assets/*" --exclude "*.html" \
+            --exclude "assets/*" --exclude "*.html" --exclude "notification-events/*" \
             --cache-control "public, max-age=86400"
           # HTML last (after the assets it references exist): always revalidate
           aws s3 sync build/client/ s3://${{ secrets.FRONTEND_BUCKET }}/ --delete \
@@ -190,3 +192,27 @@ jobs:
             --output "$deployed_html" \
             "$SITE_URL/"
           grep -Fq "$expected_asset" "$deployed_html"
+
+      - name: Prepare content notifications
+        id: notifications
+        working-directory: spa
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://jyates.dev' }}
+          MANIFEST_FILE: ${{ runner.temp }}/content-notifications.json
+        run: |
+          node scripts/collect-notifications.js \
+            "$BEFORE_SHA" "$CURRENT_SHA" "$SITE_URL" > "$MANIFEST_FILE"
+          event_count="$(jq '.events | length' "$MANIFEST_FILE")"
+          echo "event_count=$event_count" >> "$GITHUB_OUTPUT"
+
+      - name: Queue subscriber notifications
+        if: steps.notifications.outputs.event_count != '0'
+        env:
+          MANIFEST_FILE: ${{ runner.temp }}/content-notifications.json
+        run: |
+          aws s3 cp "$MANIFEST_FILE" \
+            "s3://${{ secrets.FRONTEND_BUCKET }}/notification-events/${{ github.sha }}.json" \
+            --content-type "application/json" \
+            --cache-control "no-store"

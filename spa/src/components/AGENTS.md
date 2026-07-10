@@ -36,6 +36,9 @@
   `jyatesdotdev-integration` specs.**
 - `contact.tsx` — submits via its own fetch with a hidden honeypot `website` input;
   there is no reCAPTCHA anywhere in the app.
+- `subscription-form.tsx` — shared blog/projects opt-in form with an email field,
+  topic checkboxes, and hidden `website` honeypot. `subscription-confirmation.tsx`
+  consumes the emailed token on `/subscribe/confirm` and must remain `noindex`.
 - `admin.tsx` — comment-moderation dashboard (the `/admin` route): SWR against
   `api.admin.*` with a pending/approved/rejected filter, optimistic
   approve/reject/delete with revert-on-error (`mutate`), errors reported to

@@ -129,6 +129,28 @@ export const api = {
       await requireOk(res, 'Failed to send message. Please try again later.');
     },
   },
+  subscriptions: {
+    create: async (data: {
+      email: string;
+      topics: Array<'blog' | 'projects'>;
+      website?: string;
+    }): Promise<void> => {
+      const res = await fetch('/api/v1/subscriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...visitorHeaders() },
+        body: JSON.stringify(data),
+      });
+      await requireOk(res, 'Unable to request a subscription. Please try again later.');
+    },
+    confirm: async (token: string): Promise<void> => {
+      const res = await fetch('/api/v1/subscriptions/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...visitorHeaders() },
+        body: JSON.stringify({ token }),
+      });
+      await requireOk(res, 'This confirmation link is invalid or has expired.');
+    },
+  },
   geo: {
     get: () => '/api/v1/geo',
   },

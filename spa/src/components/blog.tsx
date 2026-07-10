@@ -1,6 +1,7 @@
 import { useSearchParams, Link } from 'react-router';
 import { getPosts } from '../blog/posts';
 import { SEO } from './seo';
+import { SubscriptionForm } from './subscription-form';
 
 const POSTS_PER_PAGE = 10;
 
@@ -112,6 +113,8 @@ export function Blog() {
           </button>
         </div>
       )}
+
+      <SubscriptionForm defaultTopics={['blog']} />
     </section>
   );
 }

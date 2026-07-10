@@ -1,4 +1,5 @@
 export interface Project {
+  id: string;
   title: string;
   description: string;
   technologies: string[];
@@ -7,6 +8,7 @@ export interface Project {
 
 export const projects: Project[] = [
   {
+    id: 'personal-portfolio',
     title: 'Personal Portfolio',
     description:
       'A fully serverless portfolio and blog built on AWS. React SPA with prerendered MDX blog posts, Go Lambda API for interactive features (likes, comments, contact form), DynamoDB for storage, and CloudFront for global delivery. Infrastructure managed with Terraform and deployed via GitHub Actions OIDC.',
@@ -14,6 +16,7 @@ export const projects: Project[] = [
     github: 'https://github.com/jyatesdotdev',
   },
   {
+    id: 'project-templates',
     title: 'Comprehensive Project Templates',
     description:
       'A collection of production-ready project templates across eight languages. Each includes build tooling, testing, security scanning, CLI examples, and Docker support — designed to eliminate boilerplate when starting new projects.',
@@ -21,6 +24,7 @@ export const projects: Project[] = [
     github: 'https://github.com/jyatesdotdev?tab=repositories&q=comprehensive-template',
   },
   {
+    id: 'toggl-cmder',
     title: 'toggl-cmder',
     description:
       'A command-line tool for managing Toggl time tracking. Features fuzzy regex matching to find and start timers without needing exact names.',
@@ -28,6 +32,7 @@ export const projects: Project[] = [
     github: 'https://github.com/jyatesdotdev/toggl-cmder',
   },
   {
+    id: 'advent-of-code',
     title: 'Advent of Code',
     description:
       'Solutions to Advent of Code challenges, organized by year and day.',

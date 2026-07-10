@@ -9,11 +9,13 @@ See `spa/AGENTS.md` for the app itself.
 ## What lives at this level
 
 - `.github/workflows/deploy.yml` — deploys on push to `main` that touches `spa/**`
-  (or manual dispatch): Node 22, `npm ci && npm run build` with `VITE_*` repo variables,
-  OIDC assume-role, three-pass `aws s3 sync --delete` with tiered `Cache-Control`
+  (or manual dispatch): first runs the sibling integration repo's LocalStack E2E suite,
+  then Node 22, `npm ci && npm run build` with `VITE_*` repo variables, OIDC
+  assume-role, three-pass `aws s3 sync --delete` with tiered `Cache-Control`
   (hashed `assets/` immutable-1y → other static files 1d → HTML last, `no-cache`),
-  CloudFront invalidation `/*`, then dispatches a `run_e2e` event to the
-  `jyatesdotdev-integration` repo.
+  CloudFront invalidation `/*`, deployed-revision verification, and a trusted content
+  notification manifest under `notification-events/<sha>.json` when a push publishes a
+  post or adds a project. Static syncs must keep excluding `notification-events/`.
 - `.github/workflows/security.yml` — on push/PR to `main`: `npm audit --audit-level=high`,
   CodeQL (js/ts), `npm test` (Vitest), and a lint+typecheck job.
 - `spa/.deploy-trigger` — empty tracked file; committing a trivial change to it is the
