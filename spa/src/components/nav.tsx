@@ -2,6 +2,7 @@ import { NavLink } from 'react-router';
 import { useSyncExternalStore } from 'react';
 import { useTheme } from './theme-provider';
 import { ToolsMenu } from './tools/tools-menu';
+import { ConstructionMenus } from './construction/construction-menus';
 
 interface NavItem {
   name: string;
@@ -55,10 +56,10 @@ export function Navbar() {
     <aside className="mb-16 tracking-tight">
       <div className="lg:sticky lg:top-20">
         <nav
-          className="flex flex-row items-center relative px-0 pb-0 fade md:overflow-auto scroll-pr-6 md:relative justify-between"
+          className="flex flex-row items-start relative px-0 pb-0 fade md:overflow-auto scroll-pr-6 md:relative justify-between"
           id="nav"
         >
-          <div className="flex flex-row flex-wrap gap-2">
+          <div className="flex min-w-0 flex-1 flex-row flex-wrap gap-2">
             {Object.entries(navItems).map(([path, { name }]) => {
               return (
                 <NavLink
@@ -75,11 +76,12 @@ export function Navbar() {
               );
             })}
             <ToolsMenu />
+            <ConstructionMenus />
           </div>
 
           <button
             onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+            className="shrink-0 p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
             aria-label="Toggle theme"
           >
             {resolvedTheme === 'dark' ? (

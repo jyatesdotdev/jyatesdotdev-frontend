@@ -5,6 +5,7 @@ interface ToolWindowProps {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  size?: 'default' | 'large';
 }
 
 interface DragState {
@@ -13,16 +14,28 @@ interface DragState {
   offsetY: number;
 }
 
-const WINDOW_WIDTH = 640;
+const WINDOW_SIZES = {
+  default: {
+    width: 640,
+    windowClass: 'w-[min(40rem,calc(100vw-2rem))]',
+    contentClass: 'h-80 md:h-96',
+  },
+  large: {
+    width: 720,
+    windowClass: 'w-[min(45rem,calc(100vw-2rem))]',
+    contentClass: 'h-[22rem] md:h-[27rem]',
+  },
+} as const;
 
 /**
  * A draggable, OS-style floating window rendered in a portal. The title bar
  * drags (pointer events, so touch works too); traffic lights close, shade
  * (collapse to title bar) and maximize.
  */
-export function ToolWindow({ title, onClose, children }: ToolWindowProps) {
+export function ToolWindow({ title, onClose, children, size = 'default' }: ToolWindowProps) {
+  const windowSize = WINDOW_SIZES[size];
   const [pos, setPos] = useState(() => ({
-    x: Math.max(16, (window.innerWidth - WINDOW_WIDTH) / 2),
+    x: Math.max(16, (window.innerWidth - windowSize.width) / 2),
     y: Math.max(72, window.innerHeight * 0.15),
   }));
   const [maximized, setMaximized] = useState(false);
@@ -58,7 +71,10 @@ export function ToolWindow({ title, onClose, children }: ToolWindowProps) {
     const drag = dragState.current;
     if (!drag || drag.pointerId !== e.pointerId) return;
     setPos({
-      x: Math.min(Math.max(e.clientX - drag.offsetX, 80 - WINDOW_WIDTH), window.innerWidth - 80),
+      x: Math.min(
+        Math.max(e.clientX - drag.offsetX, 80 - windowSize.width),
+        window.innerWidth - 80
+      ),
       y: Math.min(Math.max(e.clientY - drag.offsetY, 0), window.innerHeight - 40),
     });
   }
@@ -71,7 +87,7 @@ export function ToolWindow({ title, onClose, children }: ToolWindowProps) {
     <div
       role="dialog"
       aria-label={title}
-      className="fixed z-50 flex flex-col rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-900 shadow-2xl overflow-hidden w-[min(40rem,calc(100vw-2rem))]"
+      className={`fixed z-50 flex flex-col rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-900 shadow-2xl overflow-hidden ${windowSize.windowClass}`}
       style={
         maximized
           ? shaded
@@ -123,7 +139,7 @@ export function ToolWindow({ title, onClose, children }: ToolWindowProps) {
       </div>
       {/* Hide (don't unmount) when shaded so tool state survives */}
       <div
-        className={`${maximized ? 'flex-1 min-h-0' : 'h-80 md:h-96'} ${shaded ? 'hidden' : ''}`}
+        className={`${maximized ? 'flex-1 min-h-0' : windowSize.contentClass} ${shaded ? 'hidden' : ''}`}
       >
         {children}
       </div>

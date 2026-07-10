@@ -21,6 +21,9 @@ describe('Navbar', () => {
     expect(screen.getByRole('link', { name: /projects/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /library/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /contact/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /games/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /lab/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /research/i })).toBeInTheDocument();
   });
 
   it('toggles the theme when the toggle button is clicked', async () => {

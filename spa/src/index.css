@@ -164,3 +164,136 @@ table {
 .title {
   text-wrap: balance;
 }
+
+.construction-tape {
+  background: repeating-linear-gradient(
+    135deg,
+    #f3d24e 0,
+    #f3d24e 12px,
+    #11131b 12px,
+    #11131b 24px
+  );
+}
+
+.construction-marquee {
+  animation: construction-marquee 7s linear infinite;
+}
+
+.construction-star {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: currentColor;
+  box-shadow: -4px 0 currentColor, 4px 0 currentColor, 0 -4px currentColor, 0 4px currentColor;
+  animation: construction-twinkle 1.8s steps(2, end) infinite;
+}
+
+.construction-worker-bob {
+  animation: construction-bob 1.45s steps(2, end) infinite;
+}
+
+.construction-hammer {
+  transform-box: view-box;
+  transform-origin: 139px 111px;
+  animation: construction-swing 1.45s steps(5, end) infinite;
+}
+
+.construction-sparks {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: construction-sparks 1.45s steps(2, end) infinite;
+}
+
+.construction-blink {
+  animation: construction-blink 1.1s steps(2, end) infinite;
+}
+
+@keyframes construction-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes construction-twinkle {
+  0%,
+  48% {
+    opacity: 0.25;
+  }
+  49%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes construction-swing {
+  0%,
+  55% {
+    transform: rotate(-68deg);
+  }
+  70%,
+  76% {
+    transform: rotate(0deg);
+  }
+  84%,
+  100% {
+    transform: rotate(-68deg);
+  }
+}
+
+@keyframes construction-bob {
+  0%,
+  67%,
+  78%,
+  100% {
+    transform: translateY(0);
+  }
+  68%,
+  76% {
+    transform: translateY(3px);
+  }
+}
+
+@keyframes construction-sparks {
+  0%,
+  67%,
+  78%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  68%,
+  76% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes construction-blink {
+  0%,
+  58% {
+    opacity: 1;
+  }
+  59%,
+  100% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .construction-marquee,
+  .construction-star,
+  .construction-worker-bob,
+  .construction-sparks,
+  .construction-blink {
+    animation: none;
+  }
+
+  .construction-hammer {
+    animation: none;
+    transform: rotate(-18deg);
+  }
+
+  .construction-sparks {
+    opacity: 1;
+  }
+}
