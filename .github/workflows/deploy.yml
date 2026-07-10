@@ -11,7 +11,36 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  resolve-e2e-revisions:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      api_sha: ${{ steps.refs.outputs.api_sha }}
+    steps:
+      - name: Resolve API main revision
+        id: refs
+        env:
+          GH_TOKEN: ${{ secrets.INFRA_REPO_PAT }}
+        run: |
+          api_sha="$(gh api "repos/${{ github.repository_owner }}/jyatesdotdev-api/commits/main" --jq '.sha')"
+          echo "api_sha=$api_sha" >> "$GITHUB_OUTPUT"
+
+  e2e:
+    needs: resolve-e2e-revisions
+    permissions:
+      contents: read
+    # Pin the private reusable workflow; update this SHA with integration changes.
+    uses: jyatesdotdev/jyatesdotdev-integration/.github/workflows/reusable-e2e.yml@0c311d986efbbe9b5dcfbee5f06fde0fe8edfe24
+    with:
+      api_ref: ${{ needs.resolve-e2e-revisions.outputs.api_sha }}
+      frontend_ref: ${{ github.sha }}
+      integration_ref: 0c311d986efbbe9b5dcfbee5f06fde0fe8edfe24
+    secrets:
+      repo_token: ${{ secrets.INFRA_REPO_PAT }}
+
   build-and-deploy:
+    needs: e2e
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -61,12 +90,31 @@ jobs:
             --cache-control "no-cache"
 
       - name: Invalidate CloudFront Cache
-        run: aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+        run: |
+          invalidation_id="$(aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths '/*' \
+            --query 'Invalidation.Id' \
+            --output text)"
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --id "$invalidation_id"
 
-      - name: Trigger E2E Tests
-        continue-on-error: true
-        uses: peter-evans/repository-dispatch@v4
-        with:
-          token: ${{ secrets.INFRA_REPO_PAT }}
-          repository: ${{ github.repository_owner }}/jyatesdotdev-integration
-          event-type: run_e2e
+      - name: Verify deployed revision
+        working-directory: spa
+        env:
+          SITE_URL: ${{ vars.SITE_URL || 'https://jyates.dev' }}
+        run: |
+          expected_asset="$(grep -m 1 -oE 'assets/entry\.client-[^" ]+\.js' build/client/index.html)"
+          if [ -z "$expected_asset" ]; then
+            echo "::error::Could not identify the built entry asset"
+            exit 1
+          fi
+          deployed_html="$(mktemp)"
+          trap 'rm -f "$deployed_html"' EXIT
+          curl --fail-with-body --silent --show-error --location \
+            --connect-timeout 10 --max-time 30 \
+            --retry 6 --retry-all-errors --retry-delay 10 \
+            --output "$deployed_html" \
+            "$SITE_URL/"
+          grep -Fq "$expected_asset" "$deployed_html"

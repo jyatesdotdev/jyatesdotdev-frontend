@@ -1,14 +1,11 @@
-import { useState } from 'react';
 import { Link } from 'react-router';
 import { SEO } from './seo';
-import { libraryItems, type LibraryItem } from '../data/library';
+import { libraryItems } from '../data/library';
 import { getPosts } from '../blog/posts';
 
 export function Home() {
-  // Randomize library items once per mount (lazy initializer; SPA mode, so no hydration mismatch)
-  const [randomLibraryItems] = useState<LibraryItem[]>(() =>
-    [...libraryItems].sort(() => Math.random() - 0.5).slice(0, 3)
-  );
+  // Prerender and hydration must select the same items.
+  const featuredLibraryItems = libraryItems.slice(0, 3);
   const latestPosts = getPosts().slice(0, 3);
 
   return (
@@ -70,9 +67,9 @@ export function Home() {
             </Link>
           </div>
           <div className="space-y-4">
-            {randomLibraryItems.map((item, index) => (
+            {featuredLibraryItems.map((item) => (
               <a
-                key={index}
+                key={item.url}
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"

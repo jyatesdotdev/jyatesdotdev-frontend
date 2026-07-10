@@ -51,32 +51,50 @@ const visitorHeaders = (): Record<string, string> => ({
   'X-Visitor-Id': getVisitorId(),
 });
 
-export const fetcher = async (url: string) => {
-  const res = await fetch(url, { headers: visitorHeaders() });
-  if (!res.ok) {
-    if (res.status === 401) {
-      throw new Error('Unauthorized');
-    }
-    throw new Error('An error occurred while fetching the data.');
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = 'ApiError';
   }
-  return res.json();
+}
+
+async function requireOk(response: Response, fallbackMessage: string): Promise<void> {
+  if (response.ok) return;
+
+  const messages: Partial<Record<number, string>> = {
+    401: 'Unauthorized',
+    409: 'This interaction changed. Please try again.',
+    413: 'The submitted content is too large.',
+    429: 'Too many requests. Please try again later.',
+  };
+  throw new ApiError(messages[response.status] ?? fallbackMessage, response.status);
+}
+
+function query(params: Record<string, string>): string {
+  return new URLSearchParams(params).toString();
+}
+
+export const fetcher = async <T = unknown>(url: string): Promise<T> => {
+  const res = await fetch(url, { headers: visitorHeaders() });
+  await requireOk(res, 'Unable to load data. Please try again.');
+  return res.json() as Promise<T>;
 };
 
 export const api = {
   likes: {
-    get: (slug: string) => `/api/v1/likes?slug=${slug}`,
+    get: (slug: string) => `/api/v1/likes?${query({ slug })}`,
     toggle: async (slug: string): Promise<LikesData> => {
       const res = await fetch('/api/v1/likes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...visitorHeaders() },
         body: JSON.stringify({ slug }),
       });
-      if (!res.ok) throw new Error('Failed to toggle like');
+      await requireOk(res, 'Failed to update like. Please try again.');
       return res.json();
     },
   },
   comments: {
-    get: (slug: string) => `/api/v1/comments?slug=${slug}`,
+    get: (slug: string) => `/api/v1/comments?${query({ slug })}`,
     create: async (data: {
       slug: string;
       authorName: string;
@@ -89,17 +107,26 @@ export const api = {
         headers: { 'Content-Type': 'application/json', ...visitorHeaders() },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('Failed to submit comment');
+      await requireOk(res, 'Failed to submit comment. Please try again later.');
       return res.json();
     },
-    toggleLike: async (commentId: string, slug: string): Promise<CommentData> => {
-      const res = await fetch(`/api/v1/comments/${commentId}/like`, {
+    toggleLike: async (commentId: string, slug: string): Promise<void> => {
+      const res = await fetch(`/api/v1/comments/${encodeURIComponent(commentId)}/like`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...visitorHeaders() },
         body: JSON.stringify({ slug }),
       });
-      if (!res.ok) throw new Error('Failed to toggle comment like');
-      return res.json();
+      await requireOk(res, 'Failed to update comment like. Please try again.');
+    },
+  },
+  contact: {
+    submit: async (data: { name: string; email: string; message: string; website?: string }) => {
+      const res = await fetch('/api/v1/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...visitorHeaders() },
+        body: JSON.stringify(data),
+      });
+      await requireOk(res, 'Failed to send message. Please try again later.');
     },
   },
   geo: {
@@ -113,22 +140,22 @@ export const api = {
     },
   },
   admin: {
-    getComments: (statusFilter: string) => `/api/v1/admin/comments?status=${statusFilter}`,
+    getComments: (statusFilter: string) => `/api/v1/admin/comments?${query({ status: statusFilter })}`,
     updateStatus: async (commentId: string, slug: string, newStatus: 'approved' | 'rejected') => {
-      const res = await fetch(`/api/v1/admin/comments/${commentId}`, {
+      const res = await fetch(`/api/v1/admin/comments/${encodeURIComponent(commentId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug, status: newStatus }),
       });
-      if (!res.ok) throw new Error('Failed to update comment status');
+      await requireOk(res, 'Failed to update comment status.');
     },
     deleteComment: async (commentId: string, slug: string) => {
-      const res = await fetch(`/api/v1/admin/comments/${commentId}`, {
+      const res = await fetch(`/api/v1/admin/comments/${encodeURIComponent(commentId)}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug }),
       });
-      if (!res.ok) throw new Error('Failed to delete comment');
+      await requireOk(res, 'Failed to delete comment.');
     },
   },
 };

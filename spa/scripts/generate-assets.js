@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
+import { escapeXml } from '../src/lib/xml.js';
 
 const BASE_URL = 'https://jyates.dev';
 const BLOG_DIR = path.join(process.cwd(), 'src/blog/posts');
@@ -34,15 +35,15 @@ function generateSitemap(posts) {
   ${staticPages
     .map((page) => `
   <url>
-    <loc>${BASE_URL}${page}</loc>
+    <loc>${escapeXml(`${BASE_URL}${page}`)}</loc>
     <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
   </url>`)
     .join('')}
   ${posts
     .map((post) => `
   <url>
-    <loc>${BASE_URL}/blog/${post.slug}</loc>
-    <lastmod>${post.publishedAt}</lastmod>
+    <loc>${escapeXml(`${BASE_URL}/blog/${encodeURIComponent(post.slug)}`)}</loc>
+    <lastmod>${escapeXml(post.publishedAt)}</lastmod>
   </url>`)
     .join('')}
 </urlset>`;
@@ -72,11 +73,11 @@ function generateRSS(posts) {
   ${posts
     .map((post) => `
   <item>
-    <title>${post.title}</title>
-    <link>${BASE_URL}/blog/${post.slug}</link>
-    <description>${post.summary}</description>
+    <title>${escapeXml(post.title)}</title>
+    <link>${escapeXml(`${BASE_URL}/blog/${encodeURIComponent(post.slug)}`)}</link>
+    <description>${escapeXml(post.summary)}</description>
     <pubDate>${new Date(post.publishedAt).toUTCString()}</pubDate>
-    <guid>${BASE_URL}/blog/${post.slug}</guid>
+    <guid>${escapeXml(`${BASE_URL}/blog/${encodeURIComponent(post.slug)}`)}</guid>
   </item>`)
     .join('')}
 </channel>

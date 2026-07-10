@@ -224,4 +224,22 @@ describe('Post', () => {
 
     expect(screen.getByText('Post not found')).toBeInTheDocument();
   });
+
+  it('keeps the comment form available when interaction data fails to load', async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 500 });
+
+    render(
+      <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+        <MemoryRouter initialEntries={['/blog/hello-world']}>
+          <Routes>
+            <Route path="/blog/:slug" element={<Post />} />
+          </Routes>
+        </MemoryRouter>
+      </SWRConfig>
+    );
+
+    expect(await screen.findByText('Likes unavailable.')).toBeInTheDocument();
+    expect(await screen.findByText('Comments unavailable.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Post Comment' })).toBeInTheDocument();
+  });
 });

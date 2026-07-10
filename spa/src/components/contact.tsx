@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { api } from '../api';
 import { SEO } from './seo';
 
 export function Contact() {
@@ -15,34 +16,23 @@ export function Contact() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     setStatus('sending');
     setErrorMessage('');
 
-    try {
-      const response = await fetch('/api/v1/contact', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          website: (document.querySelector('input[name="website"]') as HTMLInputElement)?.value || '',
-        }),
-      });
+    const website = new FormData(e.currentTarget).get('website') as string;
 
-      if (!response.ok) {
-        throw new Error('Failed to send message');
-      }
+    try {
+      await api.contact.submit({ ...formData, website });
 
       setStatus('success');
       setFormData({ name: '', email: '', message: '' });
     } catch (error) {
       console.error('Error sending contact form:', error);
       setStatus('error');
-      setErrorMessage('Failed to send message. Please try again later.');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to send message. Please try again later.');
       window.awsRum?.recordError(error);
     }
   };
@@ -81,6 +71,7 @@ export function Contact() {
             value={formData.name}
             onChange={handleChange}
             required
+            maxLength={100}
             className="w-full p-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black focus:ring-2 focus:ring-neutral-500 focus:border-transparent outline-none transition-all"
             placeholder="Your name"
           />
@@ -97,6 +88,7 @@ export function Contact() {
             value={formData.email}
             onChange={handleChange}
             required
+            maxLength={254}
             className="w-full p-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black focus:ring-2 focus:ring-neutral-500 focus:border-transparent outline-none transition-all"
             placeholder="your@email.com"
           />
@@ -112,6 +104,7 @@ export function Contact() {
             value={formData.message}
             onChange={handleChange}
             required
+            maxLength={5000}
             rows={5}
             className="w-full p-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black focus:ring-2 focus:ring-neutral-500 focus:border-transparent outline-none transition-all resize-none"
             placeholder="How can I help you?"

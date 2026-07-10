@@ -12,6 +12,7 @@ import Footer from "./components/footer";
 import { ThemeProvider } from "./components/theme-provider";
 import { Analytics } from "./components/analytics";
 import { SWRConfig } from "swr";
+import { useEffect, useRef } from "react";
 
 import "@fontsource/geist-sans/400.css";
 import "@fontsource/geist-sans/500.css";
@@ -39,17 +40,27 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const appRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    appRef.current?.setAttribute("data-hydrated", "true");
+  }, []);
+
   return (
     <ThemeProvider defaultTheme="system" storageKey="jyates-theme">
       <SWRConfig value={{
         onError: (error: Error, key: string) => {
-          window.awsRum?.recordError(
-            error instanceof Error ? error : new Error(`SWR fetch failed: ${key}`)
-          );
+          if (typeof window !== "undefined") {
+            window.awsRum?.recordError(
+              error instanceof Error ? error : new Error(`SWR fetch failed: ${key}`)
+            );
+          }
         },
       }}>
           <div 
+            ref={appRef}
             data-testid="app-container" 
+            data-hydrated="false"
             className="font-sans antialiased text-black bg-white dark:text-white dark:bg-black min-h-screen flex flex-col"
           >
             <main className="flex-auto min-w-0 mt-6 flex flex-col px-4 md:px-0 max-w-xl md:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto w-full">
@@ -76,7 +87,9 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         : error.statusText || details;
   } else if (error && error instanceof Error) {
     // Report rendering crashes to telemetry
-    window.awsRum?.recordError(error);
+    if (typeof window !== "undefined") {
+      window.awsRum?.recordError(error);
+    }
     if (import.meta.env.DEV) {
       details = error.message;
     }
