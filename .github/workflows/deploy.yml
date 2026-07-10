@@ -17,27 +17,58 @@ jobs:
       contents: read
     outputs:
       api_sha: ${{ steps.refs.outputs.api_sha }}
+      integration_sha: ${{ steps.refs.outputs.integration_sha }}
     steps:
-      - name: Resolve API main revision
+      - name: Resolve E2E revisions
         id: refs
         env:
           GH_TOKEN: ${{ secrets.INFRA_REPO_PAT }}
         run: |
           api_sha="$(gh api "repos/${{ github.repository_owner }}/jyatesdotdev-api/commits/main" --jq '.sha')"
+          integration_sha="$(gh api "repos/${{ github.repository_owner }}/jyatesdotdev-integration/commits/main" --jq '.sha')"
           echo "api_sha=$api_sha" >> "$GITHUB_OUTPUT"
+          echo "integration_sha=$integration_sha" >> "$GITHUB_OUTPUT"
 
   e2e:
     needs: resolve-e2e-revisions
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
-    # Pin the private reusable workflow; update this SHA with integration changes.
-    uses: jyatesdotdev/jyatesdotdev-integration/.github/workflows/reusable-e2e.yml@0c311d986efbbe9b5dcfbee5f06fde0fe8edfe24
-    with:
-      api_ref: ${{ needs.resolve-e2e-revisions.outputs.api_sha }}
-      frontend_ref: ${{ github.sha }}
-      integration_ref: 0c311d986efbbe9b5dcfbee5f06fde0fe8edfe24
-    secrets:
-      repo_token: ${{ secrets.INFRA_REPO_PAT }}
+    steps:
+      - name: Dispatch and wait for exact-revision E2E
+        env:
+          GH_TOKEN: ${{ secrets.INFRA_REPO_PAT }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          API_REF: ${{ needs.resolve-e2e-revisions.outputs.api_sha }}
+          FRONTEND_REF: ${{ github.sha }}
+          INTEGRATION_REF: ${{ needs.resolve-e2e-revisions.outputs.integration_sha }}
+        run: |
+          correlation_id="frontend-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          run_title="E2E gate ${correlation_id}"
+          integration_repo="${REPOSITORY_OWNER}/jyatesdotdev-integration"
+
+          jq -n \
+            --arg correlation_id "$correlation_id" \
+            --arg api_ref "$API_REF" \
+            --arg frontend_ref "$FRONTEND_REF" \
+            --arg integration_ref "$INTEGRATION_REF" \
+            '{event_type:"run_e2e",client_payload:{correlation_id:$correlation_id,api_ref:$api_ref,frontend_ref:$frontend_ref,integration_ref:$integration_ref}}' |
+            gh api --method POST "repos/${integration_repo}/dispatches" --input -
+
+          deadline=$((SECONDS + 180))
+          run_id=""
+          while [[ -z "$run_id" && $SECONDS -lt $deadline ]]; do
+            run_id="$(gh api "repos/${integration_repo}/actions/runs?event=repository_dispatch&per_page=20" |
+              jq -r --arg title "$run_title" '[.workflow_runs[] | select(.display_title == $title) | .id] | first // empty')"
+            [[ -n "$run_id" ]] || sleep 3
+          done
+
+          if [[ -z "$run_id" ]]; then
+            echo "::error::Timed out waiting for the integration workflow to start"
+            exit 1
+          fi
+          gh run watch "$run_id" --repo "$integration_repo" --exit-status
 
   build-and-deploy:
     needs: e2e
