@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { ToolWindow } from './tool-window';
 import { Terminal } from './terminal';
 
@@ -116,8 +116,12 @@ export function ToolsMenu() {
                 key={tool.id}
                 role="menuitem"
                 onClick={() => {
-                  setOpenTool(tool);
-                  setMenuOpen(false);
+                  // Keep terminal mounting inside the tap gesture so mobile
+                  // browsers allow its auto-focused input to open the keyboard.
+                  flushSync(() => {
+                    setOpenTool(tool);
+                    setMenuOpen(false);
+                  });
                 }}
                 className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
               >

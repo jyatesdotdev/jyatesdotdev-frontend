@@ -208,6 +208,16 @@ table {
   animation: construction-blink 1.1s steps(2, end) infinite;
 }
 
+.terminal-keyboard-button {
+  display: none;
+}
+
+@media (max-width: 767px), (hover: none) and (pointer: coarse) {
+  .terminal-keyboard-button {
+    display: flex;
+  }
+}
+
 @keyframes construction-marquee {
   to {
     transform: translateX(-50%);

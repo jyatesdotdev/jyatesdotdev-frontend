@@ -43,6 +43,20 @@ describe('ToolsMenu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: /jsh/i })).toBeInTheDocument();
     expect(screen.getByTestId('terminal')).toHaveTextContent('welcome to jyates.dev');
+    expect(screen.getByLabelText('Terminal input')).toHaveFocus();
+  });
+
+  it('refocuses the input from the mobile keyboard control', async () => {
+    renderToolsMenu();
+    const user = userEvent.setup();
+
+    await openTerminal(user);
+    const input = screen.getByLabelText('Terminal input');
+    input.blur();
+    expect(input).not.toHaveFocus();
+
+    await user.click(screen.getByRole('button', { name: /open device keyboard/i }));
+    expect(input).toHaveFocus();
   });
 
   it('runs commands typed into the terminal', async () => {

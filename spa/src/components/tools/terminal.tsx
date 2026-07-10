@@ -67,6 +67,10 @@ export function Terminal({ onClose }: { onClose: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  function focusInput() {
+    inputRef.current?.focus({ preventScroll: true });
+  }
+
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
@@ -215,41 +219,58 @@ export function Terminal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      ref={scrollRef}
       data-testid="terminal"
-      className="h-full overflow-y-auto bg-neutral-950 text-neutral-200 font-mono text-[13px] leading-relaxed p-3 cursor-text"
-      onClick={() => inputRef.current?.focus()}
+      className="relative h-full overflow-hidden bg-neutral-950 text-neutral-200 font-mono text-[13px] leading-relaxed cursor-text"
+      onClick={focusInput}
     >
-      {lines.map((line) =>
-        line.kind === 'cmd' ? (
-          <div key={line.id} className="whitespace-pre-wrap break-words">
-            <span className="text-emerald-400">{line.prompt}</span> {line.text}
-          </div>
-        ) : (
-          <div key={line.id} className="whitespace-pre-wrap break-words min-h-[1.25rem]">
-            {line.text}
-          </div>
-        )
-      )}
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <span className="text-emerald-400 whitespace-pre">{promptFor(cwd)}</span>
-        <input
-          ref={inputRef}
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            setHistoryIndex(null);
-          }}
-          onKeyDown={handleKeyDown}
-          className="flex-1 min-w-0 bg-transparent outline-none text-neutral-200 caret-emerald-400"
-          aria-label="Terminal input"
-          autoFocus
-          autoComplete="off"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-        />
-      </form>
+      <div ref={scrollRef} className="h-full overflow-y-auto p-3 pb-14 sm:pb-3">
+        {lines.map((line) =>
+          line.kind === 'cmd' ? (
+            <div key={line.id} className="whitespace-pre-wrap break-words">
+              <span className="text-emerald-400">{line.prompt}</span> {line.text}
+            </div>
+          ) : (
+            <div key={line.id} className="whitespace-pre-wrap break-words min-h-[1.25rem]">
+              {line.text}
+            </div>
+          )
+        )}
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <span className="text-emerald-400 whitespace-pre">{promptFor(cwd)}</span>
+          <input
+            ref={inputRef}
+            type="text"
+            inputMode="text"
+            enterKeyHint="go"
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              setHistoryIndex(null);
+            }}
+            onKeyDown={handleKeyDown}
+            className="flex-1 min-w-0 bg-transparent outline-none text-neutral-200 caret-emerald-400"
+            aria-label="Terminal input"
+            autoFocus
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+        </form>
+      </div>
+
+      <button
+        type="button"
+        aria-label="Open device keyboard"
+        title="Open keyboard"
+        onClick={(event) => {
+          event.stopPropagation();
+          focusInput();
+        }}
+        className="terminal-keyboard-button absolute bottom-3 right-3 h-10 w-10 items-center justify-center rounded-md border border-neutral-700 bg-neutral-900 text-lg text-neutral-300 shadow-lg hover:border-neutral-500 hover:text-white active:bg-neutral-800"
+      >
+        <span aria-hidden="true">⌨</span>
+      </button>
     </div>
   );
 }

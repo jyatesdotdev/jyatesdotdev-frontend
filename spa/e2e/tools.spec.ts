@@ -182,6 +182,10 @@ test.describe('Tools', () => {
     const input = page.getByLabel('Terminal input');
     await expect(dialog).toBeVisible();
     await expect(input).toBeVisible();
+    await expect(input).toBeFocused();
+    await input.evaluate((element) => element.blur());
+    await page.getByRole('button', { name: 'Open device keyboard' }).click();
+    await expect(input).toBeFocused();
     await input.fill('man grep');
     await input.press('Enter');
     await expect(dialog).toContainText('SYNOPSIS');
