@@ -21,7 +21,8 @@ const MENU_WIDTH = 184;
 
 /**
  * Placeholder nav menus for sections that will grow into their own registries.
- * A single controller keeps their dropdowns and floating window mutually exclusive.
+ * One controller keeps dropdowns mutually exclusive while launched windows
+ * remain independent.
  */
 export function ConstructionMenus() {
   const [openMenu, setOpenMenu] = useState<SectionId | null>(null);

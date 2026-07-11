@@ -10,8 +10,9 @@ This is the React Router `appDirectory` (configured in `../react-router.config.t
   crashes to `window.awsRum?.recordError`. SWR's global `onError` also reports to RUM.
 - `routes.ts` — the route table (`index`, `route(...)`, catch-all `*`).
 - `index.css` — Tailwind v4 entry: `@import "tailwindcss"`, `@theme` font tokens,
-  `@custom-variant dark`, sugar-high `--sh-*` syntax-highlight colors. There is no
-  tailwind.config file — Tailwind v4 is configured in CSS.
+  `@custom-variant dark`, sugar-high `--sh-*` syntax-highlight colors, construction
+  animation keyframes, and the coarse-pointer mobile keyboard control rule. There is
+  no tailwind.config file — Tailwind v4 is configured in CSS.
 - `routes/` — thin re-export shims only (see `routes/AGENTS.md`).
 - `components/` — all real UI + co-located tests (see `components/AGENTS.md`).
 - `blog/` — MDX post registry and posts (see `blog/AGENTS.md`).

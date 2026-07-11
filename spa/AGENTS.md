@@ -48,8 +48,10 @@ Before finishing any change: `npm run lint && npm run typecheck && npm test`
 
 - Unit tests are co-located (`foo.tsx` + `foo.test.tsx`), Testing Library, components
   wrapped in `MemoryRouter`.
-- `e2e/` holds both functional specs (`home.spec.ts`, `tools.spec.ts` — assertion-based,
-  platform-independent) and the visual-regression suite (`visual.spec.ts`).
+- `e2e/` holds platform-independent functional specs for navigation, subscriptions,
+  tools, multi-window stacking, and construction placeholders (`home.spec.ts`,
+  `subscriptions.spec.ts`, `tools.spec.ts`, `construction.spec.ts`) plus the
+  visual-regression suite (`visual.spec.ts`).
 - `e2e/visual.spec.ts-snapshots/` baselines are **`-chromium-darwin` (macOS-only)**.
   Running Playwright on Linux regenerates different snapshot names/pixels and fails —
   these are local-macOS baselines; CI does not run this suite. The functional specs

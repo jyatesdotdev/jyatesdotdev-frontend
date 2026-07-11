@@ -20,10 +20,13 @@ See `spa/AGENTS.md` for the app itself.
   CodeQL (js/ts), `npm test` (Vitest), and a lint+typecheck job.
 - `spa/.deploy-trigger` — empty tracked file; committing a trivial change to it is the
   mechanism to force a redeploy without other code changes (deploy only fires on `spa/**`).
+- `JOURNEY.md` — narrative project history and design rationale. It is context, not a
+  replacement for the current contracts in code and nested `AGENTS.md` files.
 
 ## Gotchas
 
 - Run `npm run lint`, `npm run typecheck`, and `npm test` (from `spa/`) before
   considering a change done — CI enforces all three on push/PR to `main`.
-- E2E for the deployed stack lives in the sibling `jyatesdotdev-integration` repo, not
-  here. `spa/e2e/` only holds a local visual-regression Playwright suite.
+- Cross-repo E2E for the deployed stack lives in the sibling
+  `jyatesdotdev-integration` repo. `spa/e2e/` holds local functional Playwright specs
+  for core browser workflows plus the macOS-bound visual-regression suite.

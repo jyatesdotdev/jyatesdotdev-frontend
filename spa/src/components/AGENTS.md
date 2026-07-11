@@ -39,6 +39,9 @@
 - `subscription-form.tsx` — shared blog/projects opt-in form with an email field,
   topic checkboxes, and hidden `website` honeypot. `subscription-confirmation.tsx`
   consumes the emailed token on `/subscribe/confirm` and must remain `noindex`.
+- `nav.tsx` — route links plus the tools and construction-section menus. The nav wraps
+  on narrow screens; dropdowns render through portals so the nav's overflow behavior
+  cannot clip them.
 - `admin.tsx` — comment-moderation dashboard (the `/admin` route): SWR against
   `api.admin.*` with a pending/approved/rejected filter, optimistic
   approve/reject/delete with revert-on-error (`mutate`), errors reported to
@@ -49,11 +52,13 @@
 
 - `tools-menu.tsx` — the "tools" entry in the navbar. **To add a new tool, add one
   entry to its `TOOLS` array** (id, name, windowTitle, render). The dropdown and the
-  open window render in portals (fixed positioning) because the nav container's
-  `overflow-auto` would clip absolutely-positioned children. Window state lives here
-  so an open tool survives route changes (the navbar never unmounts). Heavy tools
-  (e.g. the visitor map) are `lazy()`-imported and wrapped in `<Suspense>` so they
-  code-split out of the main chunk.
+  open windows render in portals (fixed positioning) because the nav container's
+  `overflow-auto` would clip absolutely-positioned children. Every launch creates an
+  independent instance in the `openTools` array; do not collapse this back to a single
+  selected-tool state. Window state lives here so open tools survive route changes
+  (the navbar never unmounts). Heavy tools (e.g. the visitor map) are `lazy()`-imported
+  and wrapped in `<Suspense>` so they code-split out of the main chunk. Terminal launch
+  uses `flushSync` so its auto-focused input remains part of the originating mobile tap.
 - `visitor-map.tsx` — world map of visitor hits (default export, lazy-loaded).
   Renders an SVG choropleth with `d3-geo` (`geoNaturalEarth1`) over bundled
   `world-atlas/countries-110m.json`; TopoJSON numeric feature ids are mapped to
@@ -66,8 +71,12 @@
   `flagEmoji()`) and deliberately does NOT import world-atlas, so the terminal reuses
   it without pulling in the map bundle.
 - `tool-window.tsx` — generic draggable OS-style window (pointer events + portal):
-  red closes, yellow shades, green/double-click maximizes, Escape closes. Reuse it
-  for every tool; put tool-specific UI in its own component.
+  red closes, yellow shades, green/double-click maximizes. A module-level live-window
+  registry assigns cascade positions and monotonically increasing z-indexes; pointer
+  or keyboard focus raises a window, and Escape closes only the foreground window.
+  Dropdown menus deliberately sit above the window stack. `size="large"` is available
+  for roomier experiences while both sizes remain viewport-bounded. Reuse this
+  component for every floating experience; put tool-specific UI in its own component.
 - `terminal.tsx` + `terminal-commands.ts` — the CLI emulator (`jsh`). Command logic
   is a pure function (`runCommand(input, ctx)`) with side effects injected via
   `TerminalContext`, so commands are unit-tested without rendering
@@ -83,6 +92,9 @@
   async deps (`ctx.fetchGeo`, `ctx.fetchStatus`) and returns lines that the terminal
   appends when they resolve. Keep formatting in exported pure functions
   (`formatGeo`, `formatStatus`) so it is unit-tested without a promise.
+  On mobile, terminal mounting is synchronized with the menu tap and a touch/narrow-
+  viewport keyboard button directly refocuses the real text input; headless tests can
+  assert focus but cannot display the operating system keyboard.
 - `terminal-lab.ts` — deterministic, browser-only SMART output and the stateful
   on-call incident scenario. Its `incident/` evidence is mounted read-only by the
   virtual filesystem in `terminal-commands.ts`.
@@ -92,3 +104,13 @@
   `checkWrite()`/`validatePath()`. Built-ins are read-only; writes go through
   `ctx.writeFile`/`ctx.deleteFile`. Command history is separately bounded to 100
   entries under `jyates-jsh-history`.
+
+## construction/ — future-section placeholders
+
+- `construction-menus.tsx` — navbar entries for games, lab, and research. Dropdowns
+  are mutually exclusive, but launched windows are independent instances in
+  `openSections`, matching the tools menu's multi-window behavior.
+- `under-construction.tsx` — responsive pixel-art placeholder shown in a large
+  `ToolWindow`. The worker, hammer impact, sparks, marquee, and blinking accents use
+  custom keyframes in `index.css`; reduced-motion mode freezes them into a readable
+  static composition.
