@@ -80,7 +80,7 @@ function positionForOffset(width: number, offset: number) {
   const maxX = Math.max(16, window.innerWidth - renderedWidth - 16);
   return {
     x: Math.min(maxX, centeredX + offset),
-    y: Math.max(72, window.innerHeight * 0.15) + offset,
+    y: Math.min(Math.max(72, window.innerHeight * 0.15) + offset, window.innerHeight - 80),
   };
 }
 

@@ -46,6 +46,17 @@ describe('ToolsMenu', () => {
     expect(screen.getByLabelText('Terminal input')).toHaveFocus();
   });
 
+  it('keeps existing tool instances open when another is launched', async () => {
+    renderToolsMenu();
+    const user = userEvent.setup();
+
+    await openTerminal(user);
+    await openTerminal(user);
+
+    expect(screen.getAllByRole('dialog', { name: /jsh/i })).toHaveLength(2);
+    expect(screen.getAllByLabelText('Terminal input')).toHaveLength(2);
+  });
+
   it('refocuses the input from the mobile keyboard control', async () => {
     renderToolsMenu();
     const user = userEvent.setup();

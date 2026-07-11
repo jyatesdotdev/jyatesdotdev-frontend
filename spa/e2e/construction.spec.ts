@@ -80,4 +80,22 @@ test.describe('Construction sections', () => {
     await expect(construction).not.toBeVisible();
     await expect(terminal).toBeVisible();
   });
+
+  test('keeps multiple windows from the same menu open independently', async ({ page }) => {
+    await page.goto('/');
+
+    for (let count = 0; count < 2; count++) {
+      await page.getByRole('button', { name: 'tools', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'terminal' }).click();
+    }
+
+    const terminals = page.getByRole('dialog', { name: /jsh/ });
+    await expect(terminals).toHaveCount(2);
+    await expect(terminals.nth(0)).toBeVisible();
+    await expect(terminals.nth(1)).toBeVisible();
+
+    await terminals.nth(1).getByRole('button', { name: 'Close window' }).click();
+    await expect(terminals).toHaveCount(1);
+    await expect(terminals.nth(0)).toBeVisible();
+  });
 });

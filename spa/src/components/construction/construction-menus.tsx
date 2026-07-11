@@ -12,6 +12,11 @@ const SECTIONS = [
 type Section = (typeof SECTIONS)[number];
 type SectionId = Section['id'];
 
+interface OpenSection {
+  instanceId: number;
+  section: Section;
+}
+
 const MENU_WIDTH = 184;
 
 /**
@@ -21,7 +26,8 @@ const MENU_WIDTH = 184;
 export function ConstructionMenus() {
   const [openMenu, setOpenMenu] = useState<SectionId | null>(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
-  const [openSection, setOpenSection] = useState<Section | null>(null);
+  const [openSections, setOpenSections] = useState<OpenSection[]>([]);
+  const nextInstanceId = useRef(0);
   const buttonRefs = useRef<Partial<Record<SectionId, HTMLButtonElement | null>>>({});
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -66,6 +72,10 @@ export function ConstructionMenus() {
     setOpenMenu(section.id);
   }
 
+  function closeSection(instanceId: number) {
+    setOpenSections((open) => open.filter((instance) => instance.instanceId !== instanceId));
+  }
+
   const menuSection = SECTIONS.find((section) => section.id === openMenu);
 
   return (
@@ -80,7 +90,8 @@ export function ConstructionMenus() {
           aria-expanded={openMenu === section.id}
           aria-haspopup="menu"
           className={`transition-all hover:text-neutral-800 dark:hover:text-neutral-200 flex items-center gap-1 relative py-1 px-2 ${
-            openSection?.id === section.id || openMenu === section.id
+            openSections.some((instance) => instance.section.id === section.id) ||
+            openMenu === section.id
               ? 'text-neutral-900 dark:text-neutral-100 font-medium'
               : 'text-neutral-500'
           }`}
@@ -111,7 +122,10 @@ export function ConstructionMenus() {
             <button
               role="menuitem"
               onClick={() => {
-                setOpenSection(menuSection);
+                setOpenSections((open) => [
+                  ...open,
+                  { instanceId: ++nextInstanceId.current, section: menuSection },
+                ]);
                 setOpenMenu(null);
               }}
               className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
@@ -128,15 +142,16 @@ export function ConstructionMenus() {
           document.body
         )}
 
-      {openSection && (
+      {openSections.map(({ instanceId, section }) => (
         <ToolWindow
-          title={`${openSection.label} / under construction`}
-          onClose={() => setOpenSection(null)}
+          key={instanceId}
+          title={`${section.label} / under construction`}
+          onClose={() => closeSection(instanceId)}
           size="large"
         >
-          <UnderConstruction section={openSection.label} />
+          <UnderConstruction section={section.label} />
         </ToolWindow>
-      )}
+      ))}
     </>
   );
 }

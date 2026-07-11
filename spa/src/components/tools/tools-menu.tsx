@@ -14,6 +14,11 @@ interface Tool {
   render: (close: () => void) => React.ReactNode;
 }
 
+interface OpenTool {
+  instanceId: number;
+  tool: Tool;
+}
+
 function ToolFallback({ label }: { label: string }) {
   return (
     <div className="h-full flex items-center justify-center bg-neutral-950 text-neutral-500 font-mono text-xs">
@@ -50,7 +55,8 @@ const TOOLS: Tool[] = [
 export function ToolsMenu() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
-  const [openTool, setOpenTool] = useState<Tool | null>(null);
+  const [openTools, setOpenTools] = useState<OpenTool[]>([]);
+  const nextInstanceId = useRef(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -80,6 +86,10 @@ export function ToolsMenu() {
     setMenuOpen((open) => !open);
   }
 
+  function closeTool(instanceId: number) {
+    setOpenTools((open) => open.filter((instance) => instance.instanceId !== instanceId));
+  }
+
   return (
     <>
       <button
@@ -88,7 +98,9 @@ export function ToolsMenu() {
         aria-expanded={menuOpen}
         aria-haspopup="menu"
         className={`transition-all hover:text-neutral-800 dark:hover:text-neutral-200 flex items-center gap-1 relative py-1 px-2 ${
-          openTool ? 'text-neutral-900 dark:text-neutral-100 font-medium' : 'text-neutral-500'
+          openTools.length > 0
+            ? 'text-neutral-900 dark:text-neutral-100 font-medium'
+            : 'text-neutral-500'
         }`}
       >
         tools
@@ -116,10 +128,11 @@ export function ToolsMenu() {
                 key={tool.id}
                 role="menuitem"
                 onClick={() => {
+                  const instance = { instanceId: ++nextInstanceId.current, tool };
                   // Keep terminal mounting inside the tap gesture so mobile
                   // browsers allow its auto-focused input to open the keyboard.
                   flushSync(() => {
-                    setOpenTool(tool);
+                    setOpenTools((open) => [...open, instance]);
                     setMenuOpen(false);
                   });
                 }}
@@ -133,11 +146,15 @@ export function ToolsMenu() {
           document.body
         )}
 
-      {openTool && (
-        <ToolWindow title={openTool.windowTitle} onClose={() => setOpenTool(null)}>
-          {openTool.render(() => setOpenTool(null))}
+      {openTools.map(({ instanceId, tool }) => (
+        <ToolWindow
+          key={instanceId}
+          title={tool.windowTitle}
+          onClose={() => closeTool(instanceId)}
+        >
+          {tool.render(() => closeTool(instanceId))}
         </ToolWindow>
-      )}
+      ))}
     </>
   );
 }

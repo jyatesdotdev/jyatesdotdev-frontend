@@ -40,4 +40,17 @@ describe('ConstructionMenus', () => {
     expect(screen.queryByRole('menu', { name: 'games menu' })).not.toBeInTheDocument();
     expect(screen.getByRole('menu', { name: 'research menu' })).toBeInTheDocument();
   });
+
+  it('keeps existing section windows open when another is launched', async () => {
+    const user = userEvent.setup();
+    render(<ConstructionMenus />);
+
+    await user.click(screen.getByRole('button', { name: 'games' }));
+    await user.click(screen.getByRole('menuitem', { name: 'under construction' }));
+    await user.click(screen.getByRole('button', { name: 'lab' }));
+    await user.click(screen.getByRole('menuitem', { name: 'under construction' }));
+
+    expect(screen.getByRole('dialog', { name: 'games / under construction' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'lab / under construction' })).toBeInTheDocument();
+  });
 });
