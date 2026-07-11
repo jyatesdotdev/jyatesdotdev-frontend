@@ -44,4 +44,40 @@ test.describe('Construction sections', () => {
       await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)
     ).toBe(true);
   });
+
+  test('brings whichever floating window is selected to the foreground', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'tools', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'terminal' }).click();
+    const terminal = page.getByRole('dialog', { name: /jsh/ });
+
+    await page.getByRole('button', { name: 'games', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'under construction' }).click();
+    const construction = page.getByRole('dialog', { name: 'games / under construction' });
+
+    const terminalBox = await terminal.boundingBox();
+    const constructionBox = await construction.boundingBox();
+    expect(constructionBox!.y - terminalBox!.y).toBeGreaterThanOrEqual(30);
+    expect(await construction.evaluate((element) => Number(getComputedStyle(element).zIndex))).toBeGreaterThan(
+      await terminal.evaluate((element) => Number(getComputedStyle(element).zIndex))
+    );
+
+    const terminalTitleBar = terminal.locator(':scope > div').first();
+    await terminalTitleBar.click({ position: { x: terminalBox!.width / 2, y: 10 } });
+    expect(await terminal.evaluate((element) => Number(getComputedStyle(element).zIndex))).toBeGreaterThan(
+      await construction.evaluate((element) => Number(getComputedStyle(element).zIndex))
+    );
+
+    await page.mouse.click(
+      constructionBox!.x + constructionBox!.width / 2,
+      constructionBox!.y + constructionBox!.height - 10
+    );
+    expect(await construction.evaluate((element) => Number(getComputedStyle(element).zIndex))).toBeGreaterThan(
+      await terminal.evaluate((element) => Number(getComputedStyle(element).zIndex))
+    );
+
+    await page.keyboard.press('Escape');
+    await expect(construction).not.toBeVisible();
+    await expect(terminal).toBeVisible();
+  });
 });

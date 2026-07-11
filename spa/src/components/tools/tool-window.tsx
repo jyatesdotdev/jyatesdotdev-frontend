@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 interface ToolWindowProps {
@@ -14,6 +14,12 @@ interface DragState {
   offsetY: number;
 }
 
+interface WindowRegistration {
+  id: string;
+  zIndex: number;
+  offset: number;
+}
+
 const WINDOW_SIZES = {
   default: {
     width: 640,
@@ -27,6 +33,57 @@ const WINDOW_SIZES = {
   },
 } as const;
 
+const WINDOW_Z_INDEX_BASE = 100;
+const WINDOW_CASCADE_OFFSET = 32;
+let highestWindowZIndex = WINDOW_Z_INDEX_BASE;
+const activeWindows = new Map<string, WindowRegistration>();
+
+function registerWindow(id: string): WindowRegistration {
+  const existing = activeWindows.get(id);
+  if (existing) return existing;
+
+  const highestOffset = Math.max(
+    -WINDOW_CASCADE_OFFSET,
+    ...Array.from(activeWindows.values(), (window) => window.offset)
+  );
+  const registration = {
+    id,
+    zIndex: ++highestWindowZIndex,
+    offset: highestOffset + WINDOW_CASCADE_OFFSET,
+  };
+  activeWindows.set(registration.id, registration);
+  return registration;
+}
+
+function focusWindow(id: string) {
+  const registration = activeWindows.get(id);
+  if (!registration) return highestWindowZIndex;
+  registration.zIndex = ++highestWindowZIndex;
+  return registration.zIndex;
+}
+
+function unregisterWindow(id: string) {
+  activeWindows.delete(id);
+}
+
+function isFrontmostWindow(id: string) {
+  const current = activeWindows.get(id);
+  if (!current) return false;
+  return Array.from(activeWindows.values()).every(
+    (registration) => registration.zIndex <= current.zIndex
+  );
+}
+
+function positionForOffset(width: number, offset: number) {
+  const renderedWidth = Math.min(width, window.innerWidth - 32);
+  const centeredX = (window.innerWidth - renderedWidth) / 2;
+  const maxX = Math.max(16, window.innerWidth - renderedWidth - 16);
+  return {
+    x: Math.min(maxX, centeredX + offset),
+    y: Math.max(72, window.innerHeight * 0.15) + offset,
+  };
+}
+
 /**
  * A draggable, OS-style floating window rendered in a portal. The title bar
  * drags (pointer events, so touch works too); traffic lights close, shade
@@ -34,13 +91,19 @@ const WINDOW_SIZES = {
  */
 export function ToolWindow({ title, onClose, children, size = 'default' }: ToolWindowProps) {
   const windowSize = WINDOW_SIZES[size];
-  const [pos, setPos] = useState(() => ({
-    x: Math.max(16, (window.innerWidth - windowSize.width) / 2),
-    y: Math.max(72, window.innerHeight * 0.15),
-  }));
+  const windowId = useId();
+  const [registration] = useState(() => registerWindow(windowId));
+  const [zIndex, setZIndex] = useState(registration.zIndex);
+  const [pos, setPos] = useState(() =>
+    positionForOffset(windowSize.width, registration.offset)
+  );
   const [maximized, setMaximized] = useState(false);
   const [shaded, setShaded] = useState(false);
   const dragState = useRef<DragState | null>(null);
+
+  function bringToFront() {
+    setZIndex(focusWindow(windowId));
+  }
 
   // Maximizing always unshades; restoring keeps whatever was behind it simple
   function toggleMaximize() {
@@ -49,12 +112,20 @@ export function ToolWindow({ title, onClose, children, size = 'default' }: ToolW
   }
 
   useEffect(() => {
+    activeWindows.set(windowId, registration);
+    return () => unregisterWindow(windowId);
+  }, [registration, windowId]);
+
+  useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && isFrontmostWindow(windowId)) {
+        e.stopImmediatePropagation();
+        onClose();
+      }
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  }, [onClose, windowId]);
 
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
     // Buttons in the title bar shouldn't start a drag
@@ -87,14 +158,17 @@ export function ToolWindow({ title, onClose, children, size = 'default' }: ToolW
     <div
       role="dialog"
       aria-label={title}
-      className={`fixed z-50 flex flex-col rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-900 shadow-2xl overflow-hidden ${windowSize.windowClass}`}
-      style={
-        maximized
+      className={`fixed flex flex-col rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-900 shadow-2xl overflow-hidden ${windowSize.windowClass}`}
+      style={{
+        ...(maximized
           ? shaded
             ? { top: 8, left: 8, right: 8, width: 'auto' }
             : { inset: 8, width: 'auto' }
-          : { left: pos.x, top: pos.y }
-      }
+          : { left: pos.x, top: pos.y }),
+        zIndex,
+      }}
+      onPointerDownCapture={bringToFront}
+      onFocusCapture={bringToFront}
     >
       <div
         className={`flex items-center gap-2 px-3 py-2 bg-neutral-800 border-b border-neutral-700 select-none touch-none ${

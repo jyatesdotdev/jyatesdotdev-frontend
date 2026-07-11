@@ -105,7 +105,7 @@ export function ConstructionMenus() {
             ref={menuRef}
             role="menu"
             aria-label={`${menuSection.label} menu`}
-            className="fixed z-50 w-46 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-lg p-1"
+            className="fixed z-[10000] w-46 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-lg p-1"
             style={{ top: menuPos.top, left: menuPos.left }}
           >
             <button
