@@ -1,0 +1,128 @@
+---
+title: "Optimizing DeepSeek V4 Flash Inference on a Strix Halo Pair: An Engineering Record"
+publishedAt: "2026-08-14"
+summary:
+  "A week-long ROCm optimization campaign on two Strix Halo nodes: MXFP4 routed-expert kernels, a bit-exact k-row speculative verifier, and a measured tour of what didn't work — 11.35 → 14.67 tok/s decode, 1.7× prefill."
+tags:
+  - projects
+  - performance
+  - rocm
+  - gpu
+  - ai-generated
+---
+
+> **Note:** This record was produced with AI assistance (Claude) — the campaign itself was an AI-agent-driven engineering session running against real hardware, with every performance claim measured and every exactness claim gate-verified. My other blog posts are written entirely by hand — AI-generated content will always be tagged and disclosed.
+
+---
+
+This is the engineering record of a one-week optimization campaign: running [DeepSeek V4 Flash](https://github.com/antirez/ds4) (the 0731 MXFP4 GGUF, ~156 GB) on two AMD Strix Halo nodes (Radeon 8060S, gfx1151, 128 GB unified memory each), pipelined by layer range — one node carries layers 0–21 plus embeddings, the output head, and the MTP draft model; the other carries layers 22 through the end. The result: single-session decode **11.35 → 14.67 tok/s**, prefill **1.70–1.71×**, with every change byte-exact against a fixed acceptance gate.
+
+The campaign's working branch is [PR #656 on antirez/ds4](https://github.com/antirez/ds4/pull/656).
+
+## The two gates
+
+Every candidate change had to pass both:
+
+- **Exactness.** A fixed temperature-0 prompt (200 tokens) must produce a bit-identical completion — verified as a SHA-256 of the text. Not "approximately equal logits": *bit-exact output*. Every shipped kernel keeps each row's reduction order identical to the one-token reference.
+- **Wall-clock decode throughput**, measured warm on the same prompt.
+
+Anything net-negative got reverted or staged default-off with its honest numbers. Anything untested didn't get committed.
+
+## The trajectory
+
+| stage | decode t/s |
+|---|---:|
+| Q4_K format baseline | 7.80 |
+| MXFP4 format (same build) | 8.17 |
+| MXFP4 routed-expert kernels (PR #656) | 14.56 (from 11.35 pre-PR) |
+| k-row MTP verifier, tier 2 | 14.11 |
+| + eval-skip | 14.24 |
+| + batched hc-pre chain | 14.26 |
+| + exact-rows batched output head | 14.44 |
+| + margin gate 0.5 (**current prod**) | **14.67** |
+
+Prefill: 70.4 → 120.6 t/s serial (1.71×), 103.9 → 176.5 t/s pipelined (1.70×).
+
+Multi-session aggregate (a shipped but currently-parked serving mode): 13.7 → 18.0 tok/s at concurrency 2, → 19.8 at 3.
+
+## What worked
+
+### MXFP4 routed-expert kernels (PR #656)
+
+Coalesced wave32 weight reads, register-resident gate/up and down reductions, MXFP4 nibble unpacks via register permutations, and a direct route for 2–4-token batches instead of partially filled expert tiles. Controlled A/B: **+28% single-token decode, +34–39% multi-token aggregate**. Validated against a CPU oracle with zero-tolerance at 1–512 tokens, and first-frontier logits byte-identical to baseline across all 129,280 values.
+
+Why it worked: MoE decode is pure bandwidth, and the win was mechanical — coalesced reads, register-resident reductions — with no algorithm or numeric change.
+
+### MXFP4 prefill tile vectorization
+
+The prefill tile kernels ran at ~3% of dp4a peak. Before rewriting, I proved the limiter was *instruction issue* (four dword activation loads plus loop control per eight dp4a) by showing insensitivity to occupancy, scratch, and DRAM traffic. The fix stages 16-byte-aligned activation quant slices (one b128 load per half sub-block) and fuses gate/up from a single activation load. Tile kernels 2.05–2.11×; end-to-end prefill 1.70–1.71×. All integer reassociation kept exact, outputs bit-identical.
+
+The lesson that generalizes: **measure which bottleneck you actually have before optimizing.** Occupancy tuning would have done nothing here.
+
+### The exact-rows contract (the foundation)
+
+gfx1151 has 2 MB of L2 and no MALL — no cache level absorbs a second weight pass. That has two consequences: generic BLAS batch paths both re-read weights per row *and* change summation order, so they were permanently banned from exact paths; and a "k-row" kernel tier — one weight pass serving K resident rows, each row's dot-and-accumulate in the one-token kernel's exact operand order — is the only way to batch bit-exactly. Flat 2–5 rows: 0.52–0.56 ms vs 1.42–1.45 ms per-row at a 4096×14336 matvec.
+
+Two traps that each cost hours, now encoded as rules:
+
+- **Accumulate statements must textually match the reference kernel**, and **row loops stay rolled** (`#pragma unroll 1`) — an unrolled tail iteration contracts the accumulate differently and silently breaks *only the last row*.
+- **Batch scratch is strided at allocation width, not tensor width** — rows-exact entries need an explicit output stride, and unit tests must cover padded strides, not just tight packing.
+
+### The k-row distributed MTP verifier
+
+The speculative verify round originally evaluated its 2–5 draft rows through a per-row loop — re-streaming the full weight set per row. The k-row span driver batches every weight-carrying stage across rows while leaving the sequential state machine per-row: spans 56.7/55.1 → 45.9/44.3 ms (coordinator/worker, rows=2), verify round 141 → ~89 ms.
+
+Sub-wins inside it, in order:
+
+- **Eval-skip** — the first token of a round was getting a full standalone eval *plus* a slot in the verify span. The span's row 0 already evaluates it bit-exactly, so the standalone eval was deleted (with a re-arm of the draft chain from the verifier's frontier hidden). 14.08 → 14.24 t/s. An earlier attempt at the re-arm alone measured *negative* (13.69) — it only pays once the eval-skip makes it load-bearing. Pairing matters.
+- **Exact-rows batched output head** — the per-row head cost ~5.8 ms/row (a 655 MB Q8 pass plus a GPU round trip, per row). 14.26 → 14.44.
+- **Merged comp-split walk** — the batched compressor-pair projections originally needed a second per-row walk plus a counter rewind. Giving the indexer pair its own batch buffer set lets one walk run both phase calls in row order, deleting the rewind entirely. Exact at 200 and 800 tokens; +0.5%, default-on.
+- **Margin gate** — skip the deep verify on the ~10% least-confident draft rounds (correctness-neutral: commits are always base argmaxes; the gate only shapes rounds). 14.44 → 14.68. The sweet spot is a top-2 logit margin threshold of 0.5; 1.0 overshoots.
+
+### Staggered multi-session decode
+
+Splitting the distributed eval into submit/complete lets concurrent sessions stagger across the two hosts instead of leaving each ~50% idle: aggregate +32% at concurrency 2, +44% at 3, transcripts byte-identical to serialized. Currently parked — production needed single-session latency, and MTP and batched-session are mutually exclusive today (unification is an open thread).
+
+## What didn't work (measured, so you don't have to)
+
+| attempt | evidence | why |
+|---|---|---|
+| k-row MoE batching | n=1 MXFP4 kernels already ~210 GB/s | bandwidth-saturated; experts differ per row, so no weight-read sharing exists to capture |
+| Thunderbolt transport (NHI) instead of TCP | rounds 91.9 vs 91.7 ms, identical output | transport is a tiny share of the round at these message sizes |
+| Draft-3 speculation (twice) | 13.32 / 13.76 vs 14.44 t/s | +42% commits per round, but the two hosts' spans run serially so rounds cost +50% |
+| Graph-capturing big-kernel stages (HIP port of the CUDA pattern) | byte-exact, time-neutral | 60–240 µs kernels already hide launch latency; the launch feed lives in 1.5–22 µs per-row op chains, which are capture-hostile |
+| Graph-capturing the eval islands | 91.0 → 92.7 ms/round | per-replay cost exceeds launch savings on ROCm — net negative |
+| Batching the FFN-pre/router chain across rows | spans 47.5 → 49.6 ms, reverted | small-kernel latency already hides behind the 360 µs MoE kernels in the same walk; the batched stage exposed its own latency serially while removing nothing from the critical path |
+| Margin gate 1.0 | 14.52 vs 14.68 at 0.5 | gates too many rounds |
+
+The most interesting negative: the FFN-pre batching experiment produced the first true **span anatomy** — 46% of the coordinator span is the bandwidth-saturated MXFP4 MoE read (21.7 ms of 45.9), and total CPU encode time for the per-row loop is 0.38 ms, which killed the "launch-feed" theory for that stage. Sometimes the failed experiment pays for itself in the measurement.
+
+## The moonshot that broke even: speculative round pipelining
+
+The structural ceiling of the two-host setup is that verify rounds are serial: coordinator span, then worker span, each host ~50% idle. The moonshot was to fill the coordinator's bubble with a *speculative next round*: while the worker computes, the coordinator materializes the guessed full-accept prefix inside a nested speculative transaction (a depth-2 extension of the engine's transactional KV frontier machinery — second prefix bank, snapshot sets, promote-on-hit, rollback-on-miss) and runs the next round's coordinator-side span over chained draft tokens.
+
+Correctness is structural: speculative-decoding commits are always base-model argmaxes, so a hit replays exactly what the real round would compute, and a miss rolls back. The implementation is exact — 800-token completions are bit-identical with the pipe on and off, and the engine-level test passes hit/miss/contract checks on real hardware.
+
+And it doesn't help: **14.26–14.42 vs 14.46 t/s without it.** Three measured walls:
+
+1. **Draft-chain cost.** Each chained MTP draft step costs 4.3 ms (decomposed: 0.25 prep + 1.45 the one transformer layer, launch-bound + 2.60 the vocab head, bandwidth-floor + 0.02 tail). Speculation needs chains four deep → +8.8 ms on every non-speculative round.
+2. **Hit rate.** The guess requires a full accept *and* a correct bonus-token prediction: 23–30% on the test content.
+3. **Coordinator bottleneck.** The coordinator runs two spans plus drafts plus the output head per cycle (75–80% GPU util vs the worker's 40–50), so the serial saving is capped by the coordinator's own floor.
+
+It ships staged, default-off, with the economics documented — the revive conditions are a cheaper draft step first, then chain continuation across hits.
+
+## The discipline notes worth keeping
+
+- Sequential-state counters double as attention's compressed-state window: any batched stage that advances them ahead of the per-row phase must rewind per row, or attention reads *future* rows' state. This class of bug diverges only at near-tie argmax boundaries, 100+ tokens into a generation — short tests look clean.
+- Draft quality never changes greedy output, only round shape — which makes draft-side experiments cheap to gate (the acceptance hash must simply hold).
+- The current two ceilings are both structural: the bandwidth-bound MoE wall (only fewer bytes or true overlap moves it) and the serial two-host verify (blocked by the draft-step bandwidth floor). Everything else on this setup is single-digit percent.
+
+## Loose ends
+
+- The upstream base branches haven't been rebased onto `antirez/main` (the PR target is ~2 weeks stale), and upstream has since shipped its own ROCm speculative decoding (DSpark) in the same problem space — the rebase order should be chosen deliberately.
+- The greedy output stream legitimately shifts with the layer split point (22:output vs 20:41) — config-stable, observed while A/B testing; an upstream question about what crosses the boundary differently.
+- A reasoning-effort tier-mapping bug upstream ([antirez/ds4 #704](https://github.com/antirez/ds4/pull/704), [#686](https://github.com/antirez/ds4/pull/686)) makes the default tier render one notch low — a prompt-rendering-only fix, parked pending a serving-behavior decision.
+
+---
+
+*The full working record (with the per-commit evidence trail) lives in the campaign branch on the PR. Env knobs, kill switches, and per-measurement conditions are documented there alongside the code.*

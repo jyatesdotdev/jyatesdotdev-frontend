@@ -5,16 +5,25 @@ import { escapeXml } from '../src/lib/xml.js';
 
 const BASE_URL = 'https://jyates.dev';
 const BLOG_DIR = path.join(process.cwd(), 'src/blog/posts');
+const RECORDS_DIR = path.join(process.cwd(), 'src/records/records');
 const BUILD_DIR = path.join(process.cwd(), 'build/client');
 
 function getBlogPosts() {
-  if (!fs.existsSync(BLOG_DIR)) return [];
-  const files = fs.readdirSync(BLOG_DIR);
+  return readMdxCollection(BLOG_DIR);
+}
+
+function getRecords() {
+  return readMdxCollection(RECORDS_DIR);
+}
+
+function readMdxCollection(dir) {
+  if (!fs.existsSync(dir)) return [];
+  const files = fs.readdirSync(dir);
   return files
     .filter((file) => file.endsWith('.mdx'))
     .map((file) => {
       const slug = file.replace('.mdx', '');
-      const content = fs.readFileSync(path.join(BLOG_DIR, file), 'utf-8');
+      const content = fs.readFileSync(path.join(dir, file), 'utf-8');
       const { data } = matter(content);
       return {
         slug,
@@ -28,8 +37,8 @@ function getBlogPosts() {
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
 }
 
-function generateSitemap(posts) {
-  const staticPages = ['', '/blog', '/career', '/projects', '/library', '/contact'];
+function generateSitemap(posts, records) {
+  const staticPages = ['', '/blog', '/records', '/career', '/projects', '/library', '/contact'];
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   ${staticPages
@@ -44,6 +53,13 @@ function generateSitemap(posts) {
   <url>
     <loc>${escapeXml(`${BASE_URL}/blog/${encodeURIComponent(post.slug)}`)}</loc>
     <lastmod>${escapeXml(post.publishedAt)}</lastmod>
+  </url>`)
+    .join('')}
+  ${records
+    .map((record) => `
+  <url>
+    <loc>${escapeXml(`${BASE_URL}/records/${encodeURIComponent(record.slug)}`)}</loc>
+    <lastmod>${escapeXml(record.publishedAt)}</lastmod>
   </url>`)
     .join('')}
 </urlset>`;
@@ -90,9 +106,10 @@ function generateRSS(posts) {
 }
 
 const posts = getBlogPosts();
+const records = getRecords();
 if (!fs.existsSync(BUILD_DIR)) {
   fs.mkdirSync(BUILD_DIR, { recursive: true });
 }
-generateSitemap(posts);
+generateSitemap(posts, records);
 generateRobots();
 generateRSS(posts);

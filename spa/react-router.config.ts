@@ -29,6 +29,20 @@ export default {
         })
         .map(f => `/blog/${f.replace(".mdx", "")}`);
     }
-    return [...staticRoutes, ...blogRoutes];
+
+    // Engineering records follow the same auto-discovery pattern.
+    const recordsDir = path.join(process.cwd(), "src/records/records");
+    let recordRoutes: string[] = [];
+    if (fs.existsSync(recordsDir)) {
+      const files = fs.readdirSync(recordsDir);
+      recordRoutes = files
+        .filter(f => f.endsWith(".mdx"))
+        .filter(f => {
+          const { data } = matter(fs.readFileSync(path.join(recordsDir, f), "utf-8"));
+          return data.draft !== true;
+        })
+        .map(f => `/records/${f.replace(".mdx", "")}`);
+    }
+    return [...staticRoutes, ...blogRoutes, ...recordRoutes];
   }
 } satisfies Config;

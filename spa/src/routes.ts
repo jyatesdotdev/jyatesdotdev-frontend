@@ -4,6 +4,8 @@ export default [
   index("routes/home.tsx"),
   route("blog", "routes/blog.tsx"),
   route("blog/:slug", "routes/post.tsx"),
+  route("records", "routes/records.tsx"),
+  route("records/:slug", "routes/record.tsx"),
   route("career", "routes/career.tsx"),
   route("projects", "routes/projects.tsx"),
   route("library", "routes/library.tsx"),
