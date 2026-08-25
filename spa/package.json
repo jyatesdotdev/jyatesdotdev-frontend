@@ -25,7 +25,7 @@
     "@react-router/node": "^8.1.0",
     "@react-router/serve": "^8.1.0",
     "@tailwindcss/vite": "^4.2.2",
-    "aws-rum-web": "^2.1.0",
+    "aws-rum-web": "^3.1.0",
     "d3-geo": "^3.1.1",
     "isbot": "^5.1.38",
     "plantuml-encoder": "^1.4.0",
