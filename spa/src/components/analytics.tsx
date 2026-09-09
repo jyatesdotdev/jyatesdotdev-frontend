@@ -96,7 +96,9 @@ export function Analytics() {
           sessionSampleRate: 1,
           identityPoolId,
           endpoint: 'https://dataplane.rum.us-west-2.amazonaws.com',
+          // Keep replay opt-in: the v3 default telemetry set includes it.
           telemetries: ['performance', 'errors', 'http'],
+          compressionStrategy: { enabled: false },
           allowCookies: true,
           enableXRay: false,
         });
