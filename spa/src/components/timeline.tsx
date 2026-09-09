@@ -74,7 +74,7 @@ export function Timeline({ items }: TimelineProps) {
         return (
           <div
             key={groupIndex}
-            ref={el => (itemRefs.current[groupIndex] = el)}
+            ref={el => { itemRefs.current[groupIndex] = el; }}
             className={`relative mb-8 sm:mb-12 pl-8 sm:pl-12 transition-all duration-500 ease-in-out ${
               activeItemIndex === groupIndex ? 'opacity-100 translate-x-0' : 'opacity-80'
             }`}

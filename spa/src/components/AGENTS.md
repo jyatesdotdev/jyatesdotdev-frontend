@@ -16,9 +16,14 @@
 - `seo.tsx` — meta/OG/Twitter/canonical tags as plain `<title>`/`<meta>`/`<link>`
   elements (React 19 hoists them into `<head>`, including during prerendering — no
   Helmet); every page renders it.
-- `analytics.tsx` — RUM abstraction: loads real `aws-rum-web` when
-  `VITE_RUM_APPLICATION_ID` is set, otherwise a `LocalRum` mock that POSTs to the dev
-  `/rum-telemetry` endpoint. Exposes `window.awsRum`. E2E telemetry tests in the
+- `analytics.tsx` — RUM abstraction: loads real `aws-rum-web` when both
+  `VITE_RUM_APPLICATION_ID` and `VITE_RUM_IDENTITY_POOL_ID` are set; with an app ID and
+  `VITE_RUM_ENDPOINT` instead, `LocalRum` POSTs to that local endpoint. Exposes `window.awsRum`.
+  SDK v3 replay stays disabled by the explicit performance/errors/http telemetry list,
+  and compression is explicitly disabled to preserve v2 transport behavior.
+  `analytics.test.tsx` exercises the actual SDK with mocked network, including its resolved
+  config and recorded events; keep the scoped uuid override while the SDK still requires v9.
+  E2E telemetry tests in the
   integration repo assert on these beacons — changing event names/shapes breaks them.
   Also fires a once-per-session, fire-and-forget `POST /api/v1/visits` beacon
   (`api.visits.record()`, guarded by sessionStorage key `jyatesdotdev-visit-recorded`)

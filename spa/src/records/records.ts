@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import type { MDXProps } from 'mdx/types';
 
 export interface RecordMetadata {
   title: string;
@@ -10,7 +11,7 @@ export interface RecordMetadata {
 }
 
 export interface RecordModule {
-  default: ComponentType;
+  default: ComponentType<MDXProps>;
   metadata: Omit<RecordMetadata, 'slug'>;
 }
 
