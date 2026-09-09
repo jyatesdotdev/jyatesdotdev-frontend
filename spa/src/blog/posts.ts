@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import type { MDXProps } from 'mdx/types';
 
 export interface PostMetadata {
   title: string;
@@ -6,11 +7,12 @@ export interface PostMetadata {
   summary: string;
   tags: string[];
   draft?: boolean;
+  image?: string;
   slug: string;
 }
 
 export interface PostModule {
-  default: ComponentType;
+  default: ComponentType<MDXProps>;
   metadata: Omit<PostMetadata, 'slug'>;
 }
 

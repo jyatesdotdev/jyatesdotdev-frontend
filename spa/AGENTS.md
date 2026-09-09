@@ -12,7 +12,7 @@ tests, Playwright for e2e (functional specs + visual-regression snapshots). ESM 
 | Build | `npm run build` (runs `scripts/generate-diagrams.js` first → PlantUML SVGs; postbuild runs `scripts/generate-assets.js` → sitemap/robots/rss) |
 | Unit tests | `npm test` (Vitest) |
 | Lint | `npm run lint` |
-| Typecheck | `npm run typecheck` (runs `react-router typegen` first — needed for route types) |
+| Typecheck | `npm run typecheck` (route typegen + `tsc -b` for app/node projects, including tests) |
 | E2e | `npm run e2e` (Playwright, port 4173 — functional + visual specs) |
 | New blog post | `npm run new-post` (interactive scaffolder) |
 | Detect publish events | `node scripts/collect-notifications.js <before-sha> <current-sha> <site-url>` |
@@ -21,6 +21,13 @@ Before finishing any change: `npm run lint && npm run typecheck && npm test`
 (CI enforces all three on push/PR to `main`).
 
 ## Config gotchas
+
+- The root `tsconfig.json` is a solution with no files of its own. Use `tsc -b`, not
+  plain `tsc`, to check its app/node references. Test environment declarations are included
+  because component tests live beside application source.
+- Keep TypeScript on 6 until the notification script's compiler API and typescript-eslint
+  support a newer major. TypeScript 7's root exports version metadata, not `createSourceFile`,
+  and the current lint parser requires TypeScript `<6.1.0`; a standalone bump breaks both.
 
 - `react-router.config.ts`: `appDirectory: "src"` (NOT the default `app/`), `ssr: false`,
   and `prerender()` derives static routes from `src/routes.ts` (index route + every path

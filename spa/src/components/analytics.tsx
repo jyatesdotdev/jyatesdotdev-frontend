@@ -90,13 +90,14 @@ export function Analytics() {
     if (identityPoolId) {
       // Production: use real AWS RUM SDK (guard against CJS/ESM default-export interop)
       import('aws-rum-web').then((pkg) => {
-        const AwsRum =
-          (pkg as typeof pkg & { default?: typeof pkg }).default?.AwsRum ?? pkg.AwsRum;
+        const AwsRum = pkg.default?.AwsRum ?? pkg.AwsRum;
         const rum = new AwsRum(appId, '1.0.0', 'us-west-2', {
           sessionSampleRate: 1,
           identityPoolId,
           endpoint: 'https://dataplane.rum.us-west-2.amazonaws.com',
+          // Keep replay opt-in: the v3 default telemetry set includes it.
           telemetries: ['performance', 'errors', 'http'],
+          compressionStrategy: { enabled: false },
           allowCookies: true,
           enableXRay: false,
         });
